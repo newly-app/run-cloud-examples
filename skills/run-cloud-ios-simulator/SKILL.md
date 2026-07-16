@@ -53,19 +53,6 @@ When no provider is detected, prefer native `runcloud` CLI commands for
 supported operations. Use a native run.cloud SDK only after confirming that
 package resolves; never invent or guess an unpublished package.
 
-## Verify the API Key
-
-```bash
-RUN_CLOUD_API_URL="${RUN_CLOUD_API_URL:-https://api.newly.app}"
-curl --fail-with-body --silent --show-error \
-  "$RUN_CLOUD_API_URL/run-cloud/auth" \
-  -H "Authorization: Bearer $RUN_CLOUD_API_KEY"
-```
-
-The request sends `RUN_CLOUD_API_KEY` only in the authorization header and
-never places it in the URL. Do not continue with API-key-backed work if
-verification fails.
-
 ## iOS Simulator Workflow
 
 1. Check access:
