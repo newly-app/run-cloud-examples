@@ -61,14 +61,16 @@ function runCloud(args) {
   });
 }
 
+export function browserCommand(url, platform = process.platform) {
+  return platform === 'darwin'
+    ? ['open', [url]]
+    : platform === 'win32'
+      ? ['rundll32', ['url.dll,FileProtocolHandler', url]]
+      : ['xdg-open', [url]];
+}
+
 function openBrowser(url) {
-  const command =
-    process.platform === 'darwin'
-      ? ['open', [url]]
-      : process.platform === 'win32'
-        ? null
-        : ['xdg-open', [url]];
-  if (!command) return;
+  const command = browserCommand(url);
   const child = spawn(command[0], command[1], { detached: true, stdio: 'ignore' });
   child.on('error', () => undefined);
   child.unref();

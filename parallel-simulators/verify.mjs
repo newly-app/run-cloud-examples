@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseOptions } from './demo.mjs';
+import { browserCommand, parseOptions } from './demo.mjs';
 
 test('defaults to three two-minute sessions', () => {
   assert.deepEqual(parseOptions([]), { count: 3, duration: 120, open: false });
@@ -21,6 +21,13 @@ test('accepts a two-session short demo', () => {
 
 test('keeps the demo within the supported parallel range', () => {
   assert.throws(() => parseOptions(['--count', '20']), /must be 2 or 3/);
+});
+
+test('opens session URLs on Windows', () => {
+  assert.deepEqual(browserCommand('https://sim.example/session', 'win32'), [
+    'rundll32',
+    ['url.dll,FileProtocolHandler', 'https://sim.example/session'],
+  ]);
 });
 
 test('starts, opens, and releases every simulator', () => {
