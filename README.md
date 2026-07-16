@@ -19,6 +19,20 @@ npm run demo -- --count 3 --duration 120 --open
 See [parallel-simulators/README.md](parallel-simulators/README.md) for account
 requirements and additional options.
 
+### Eight-device mosaic
+
+Coordinate eight live iOS simulator browsers into one synchronized 4-by-2
+run.cloud display, then release every session automatically.
+
+```bash
+git clone https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/eight-device-mosaic
+npm run demo -- --open
+```
+
+See [eight-device-mosaic/README.md](eight-device-mosaic/README.md) for account
+requirements and additional options.
+
 ## Agent skill
 
 The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) helps

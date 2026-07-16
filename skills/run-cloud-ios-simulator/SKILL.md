@@ -89,18 +89,20 @@ package resolves; never invent or guess an unpublished package.
    runcloud ios delete "$SESSION_ID"
    ```
 
-## Parallel Simulator Demo
+## Simulator Demos
 
 When `runcloud demo run --help` succeeds, run:
 
 ```bash
 runcloud demo run parallel-simulators --open
+runcloud demo run eight-device-mosaic --open
 ```
 
 Otherwise clone `https://github.com/newly-app/run-cloud-examples` and follow
-the `parallel-simulators` example. Both paths create three sessions
-concurrently and release them automatically. The demo requires the existing
-`runcloud login` simulator credential in addition to the API key.
+the matching example directory. The parallel demo creates three independent
+sessions. The mosaic coordinates eight sessions in a 4x2 animated display.
+Both release every session automatically and require the existing `runcloud
+login` simulator credential in addition to the API key.
 
 ## Embedded Iframes
 
