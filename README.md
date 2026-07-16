@@ -18,3 +18,9 @@ npm run demo -- --count 3 --duration 120 --open
 
 See [parallel-simulators/README.md](parallel-simulators/README.md) for account
 requirements and additional options.
+
+## Agent skill
+
+The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) helps
+Claude Code, Codex, and Cursor detect an existing sandbox provider before
+choosing a native run.cloud integration or a compatible migration path.
