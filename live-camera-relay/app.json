@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "run.cloud live camera relay",
+    "slug": "run-cloud-live-camera-relay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "web": {
+      "output": "single",
+      "name": "run.cloud live camera relay",
+      "shortName": "Camera relay"
+    },
+    "experiments": {
+      "baseUrl": "/run-cloud-examples/live-camera-relay"
+    }
+  }
+}

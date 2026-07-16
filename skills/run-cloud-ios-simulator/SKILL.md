@@ -1,7 +1,7 @@
 ---
 name: run-cloud-ios-simulator
 description: Configure and use run.cloud for agent sandboxes, provider-compatible migrations, and iOS simulator sessions.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # run.cloud Agent Runtime
@@ -96,13 +96,16 @@ When `runcloud demo run --help` succeeds, run:
 ```bash
 runcloud demo run parallel-simulators --open
 runcloud demo run eight-device-mosaic --open
+runcloud demo run live-camera-relay --open
 ```
 
 Otherwise clone `https://github.com/newly-app/run-cloud-examples` and follow
 the matching example directory. The parallel demo creates three independent
-sessions. The mosaic coordinates eight sessions in a 4x2 animated display.
-Both release every session automatically and require the existing `runcloud
-login` simulator credential in addition to the API key.
+sessions. The mosaic coordinates eight sessions in a 4x2 animated display. The
+camera relay connects a webcam to one simulator camera and relays its real
+WebRTC video to two receivers. All demos release every session automatically
+and require the existing `runcloud login` simulator credential in addition to
+the API key.
 
 ## Embedded Iframes
 

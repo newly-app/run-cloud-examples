@@ -33,6 +33,21 @@ npm run demo -- --open
 See [eight-device-mosaic/README.md](eight-device-mosaic/README.md) for account
 requirements and additional options.
 
+### Live camera relay
+
+Connect your webcam to one simulator camera, open the camera in an Expo web
+app, and relay the real WebRTC video to two receiver simulators.
+
+```bash
+git clone https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/live-camera-relay
+npm install
+npm run demo -- --open
+```
+
+See [live-camera-relay/README.md](live-camera-relay/README.md) for camera
+permissions, session requirements, and the local Expo workflow.
+
 ## Agent skill
 
 The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) helps
