@@ -104,10 +104,16 @@ verification fails.
 
 ## Parallel Simulator Demo
 
-Clone `https://github.com/newly-app/run-cloud-examples` and follow the
-`parallel-simulators` example. It creates three sessions concurrently and
-releases them automatically. It requires the existing `runcloud login`
-simulator credential in addition to the API key.
+When `runcloud demo run --help` succeeds, run:
+
+```bash
+runcloud demo run parallel-simulators --open
+```
+
+Otherwise clone `https://github.com/newly-app/run-cloud-examples` and follow
+the `parallel-simulators` example. Both paths create three sessions
+concurrently and release them automatically. The demo requires the existing
+`runcloud login` simulator credential in addition to the API key.
 
 ## Embedded Iframes
 

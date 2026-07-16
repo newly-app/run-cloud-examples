@@ -104,8 +104,8 @@ async function releaseSessions(sessions) {
   });
 }
 
-async function main() {
-  const options = parseOptions(process.argv.slice(2));
+export async function runDemo(args = process.argv.slice(2)) {
+  const options = parseOptions(args);
   if (options.help) {
     console.log('Usage: npm run demo -- [--count 2|3] [--duration seconds] [--open]');
     return;
@@ -178,7 +178,7 @@ async function main() {
 }
 
 if (import.meta.url === new URL(process.argv[1], 'file:').href) {
-  main().catch((error) => {
+  runDemo().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });
