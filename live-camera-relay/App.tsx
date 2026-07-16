@@ -61,7 +61,13 @@ function VideoSurface({
   />;
 }
 
-function Waveform({ stream }: { stream: MediaStream | null }) {
+function Waveform({
+  stream,
+  audioContextRef,
+}: {
+  stream: MediaStream | null;
+  audioContextRef: React.MutableRefObject<AudioContext | null>;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hasAudio = Boolean(stream?.getAudioTracks().length);
 
@@ -75,6 +81,7 @@ function Waveform({ stream }: { stream: MediaStream | null }) {
     const AudioContextClass = window.AudioContext
       ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     const audioContext = stream && hasAudio && AudioContextClass ? new AudioContextClass() : null;
+    audioContextRef.current = audioContext;
     const analyser = audioContext ? audioContext.createAnalyser() : null;
     const source = audioContext && analyser && stream
       ? audioContext.createMediaStreamSource(stream)
@@ -124,8 +131,9 @@ function Waveform({ stream }: { stream: MediaStream | null }) {
       window.cancelAnimationFrame(frame);
       source?.disconnect();
       void audioContext?.close();
+      if (audioContextRef.current === audioContext) audioContextRef.current = null;
     };
-  }, [hasAudio, stream]);
+  }, [audioContextRef, hasAudio, stream]);
 
   return (
     <View style={styles.waveformSection}>
@@ -165,6 +173,7 @@ export default function App() {
   const [receiverMuted, setReceiverMuted] = useState(true);
   const roomRef = useRef<Room | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -184,7 +193,7 @@ export default function App() {
       setPeerIds((current) => current.includes(peerId) ? current : [...current, peerId]);
       const stream = localStreamRef.current;
       if (params.role === 'broadcaster' && stream) {
-        room.addStream(stream, { target: peerId });
+        void Promise.allSettled(room.addStream(stream, { target: peerId }));
       }
     };
     room.onPeerLeave = (peerId) => {
@@ -240,11 +249,14 @@ export default function App() {
       }
     }
 
-    for (const track of localStreamRef.current?.getTracks() ?? []) track.stop();
+    const previousStream = localStreamRef.current;
+    if (previousStream) roomRef.current?.removeStream(previousStream);
+    for (const track of previousStream?.getTracks() ?? []) track.stop();
     localStreamRef.current = stream;
     setLocalStream(stream);
     setMediaState('ready');
-    roomRef.current?.addStream(stream);
+    const sends = roomRef.current?.addStream(stream) ?? [];
+    void Promise.allSettled(sends);
   }, []);
 
   if (Platform.OS !== 'web') {
@@ -308,7 +320,9 @@ export default function App() {
         </View>
       </View>
 
-      {params.role === 'receiver' ? <Waveform stream={remoteStream} /> : null}
+      {params.role === 'receiver' ? (
+        <Waveform stream={remoteStream} audioContextRef={audioContextRef} />
+      ) : null}
 
       <View style={styles.footer}>
         <View>
@@ -333,7 +347,10 @@ export default function App() {
         ) : remoteStream?.getAudioTracks().length ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => setReceiverMuted((current) => !current)}
+            onPress={() => {
+              if (receiverMuted) void audioContextRef.current?.resume();
+              setReceiverMuted((current) => !current);
+            }}
             style={({ pressed }) => [styles.secondaryButton, pressed ? styles.buttonPressed : null]}
           >
             <Text style={styles.secondaryButtonText}>
