@@ -1,0 +1,13 @@
+{
+  "name": "run-cloud-parallel-simulators-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node demo.mjs",
+    "test": "node --test verify.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
