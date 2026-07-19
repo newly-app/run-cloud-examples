@@ -48,6 +48,21 @@ npm run demo -- --open
 See [live-camera-relay/README.md](live-camera-relay/README.md) for camera
 permissions, session requirements, and the local Expo workflow.
 
+### SDK iOS and Android sessions
+
+Use `@run-cloud/sdk` to create iOS simulator and Android emulator sessions,
+open URLs inside them, and release sessions from TypeScript or Node.js code.
+
+```bash
+git clone https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/sdk-ios-android
+npm install
+npm run demo -- --platform both --open
+```
+
+See [sdk-ios-android/README.md](sdk-ios-android/README.md) for API key setup,
+platform-specific options, and cleanup behavior.
+
 ## Agent skill
 
 The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) helps
