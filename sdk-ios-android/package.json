@@ -1,0 +1,16 @@
+{
+  "name": "run-cloud-sdk-ios-android-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node demo.mjs",
+    "test": "node --test verify.mjs"
+  },
+  "dependencies": {
+    "@run-cloud/sdk": "^0.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
