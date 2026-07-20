@@ -11,12 +11,12 @@ or release an iOS simulator or Android emulator through run.cloud.
 
 ## Requirements
 
-- Read SDK credentials from `RUN_CLOUD_API_KEY`. Never print the key, commit it,
-  or write it into a skill file.
-- Use `RUN_CLOUD_API_URL` when set; otherwise use `https://api.newly.app`.
-- Treat SDK API keys and CLI login tokens as separate credentials. TypeScript
-  SDK and REST requests use `RUN_CLOUD_API_KEY`; interactive CLI commands use
-  the session created by `runcloud login`.
+- Read SDK credentials from `RUN_CLOUD_API_KEY`. Never print it, commit it,
+  or write it into a skill file. The SDK uses `RUN_CLOUD_API_URL` when set and
+  otherwise defaults to `https://api.newly.app`.
+- Authenticate the CLI with either a saved `runcloud login` credential or
+  `RUN_CLOUD_API_KEY` together with `RUN_CLOUD_API_URL`. Do not require both a
+  saved login and an API key.
 - The TypeScript SDK requires Node.js 20 or newer.
 - The account must have run.cloud access, available capacity, and a positive
   run.cloud balance.
@@ -69,11 +69,23 @@ https://run.cloud/cli/typescript-sdk before using a method not listed here.
 
 ## CLI Workflow
 
-Use the CLI for interactive terminal work:
+Use the CLI for interactive terminal work. Authenticate with a saved login:
 
 ```bash
 npm install -g runcloud
 runcloud login
+```
+
+Or authenticate non-interactively with both required environment variables:
+
+```bash
+export RUN_CLOUD_API_KEY="rc_live_..."
+export RUN_CLOUD_API_URL="https://api.newly.app"
+```
+
+Then inspect the account:
+
+```bash
 runcloud account --json
 ```
 
@@ -105,6 +117,19 @@ Use `--platform ios` or `--platform android` for one platform. Use `--json` for
 machine-readable output. The example releases sessions on completion, failure,
 SIGINT, and SIGTERM unless the user explicitly passes `--keep`.
 
+## Bundled CLI Demos
+
+These published demos exercise multi-simulator workflows:
+
+```bash
+runcloud demo run parallel-simulators --open
+runcloud demo run eight-device-mosaic --open
+runcloud demo run live-camera-relay --open
+```
+
+They use the same CLI authentication choices described above and release every
+session automatically.
+
 ## Embedded Iframes
 
 - Use `inactivityTimeout: "60s"` in the SDK, or
@@ -113,9 +138,12 @@ SIGINT, and SIGTERM unless the user explicitly passes `--keep`.
 - Omit the option or pass `null`/`none` when the user needs a metered session
   without idle auto-close.
 - Treat the returned signed session URL as a secret. Do not publish it in logs.
-- Verify `event.source` before acting on simulator messages from an iframe.
-- Create a fresh session after a restart request; do not reuse an ended iframe
-  URL.
+- Iframes post `ios-simulator:status`, `ios-simulator:auth-error`,
+  `ios-simulator:session-ended`, and
+  `ios-simulator:session-restart-requested` messages to the parent window.
+- Verify `event.source` before acting on iframe messages.
+- When `ios-simulator:session-restart-requested` arrives, create a fresh
+  session; do not reuse the ended iframe URL.
 
 ## Rules
 

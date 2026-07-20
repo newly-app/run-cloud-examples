@@ -9,8 +9,9 @@ is interrupted.
 ## Requirements
 
 - Node.js 20 or newer
-- `runcloud` 0.1.3 or newer: `npm install -g runcloud@0.1.3`
-- An existing simulator account authenticated with `runcloud login`
+- `runcloud` 0.1.3 or newer: `npm install -g runcloud`
+- A simulator account authenticated either with `runcloud login` or with both
+  `RUN_CLOUD_API_KEY` and `RUN_CLOUD_API_URL`
 - run.cloud simulator access, capacity, and enough balance for eight sessions
 
 The local viewer binds only to `127.0.0.1`. Signed simulator URLs remain in the
