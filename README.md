@@ -65,6 +65,33 @@ npm run demo -- --open
 See [live-camera-relay/README.md](live-camera-relay/README.md) for camera
 permissions, session requirements, and the local Expo workflow.
 
+## Verify the published onboarding
+
+The published-artifact suite installs exact npm releases, exercises the SDK
+against a mock API, installs the bundled agent skill, and scaffolds and verifies
+all three CLI demos without creating metered sessions:
+
+```bash
+cd tests
+npm ci
+npm test
+```
+
+An opt-in live test creates one iOS simulator through the SDK, inspects and
+controls it through the CLI, and releases it in `finally`:
+
+```bash
+cd tests
+RUN_CLOUD_LIVE_E2E=1 \
+RUN_CLOUD_API_KEY="rc_live_..." \
+RUN_CLOUD_API_URL="https://api.newly.app" \
+npm run test:live
+```
+
+Set `RUN_CLOUD_LIVE_PLATFORM=android` to test Android instead. The GitHub
+Actions workflow exposes the same live test through an explicit manual dispatch
+so normal pull requests never create paid sessions.
+
 ## Agent skill
 
 The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) teaches

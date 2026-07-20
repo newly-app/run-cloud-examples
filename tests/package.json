@@ -1,0 +1,17 @@
+{
+  "name": "run-cloud-published-onboarding-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test published-onboarding.test.mjs",
+    "test:live": "node --test live-onboarding.test.mjs"
+  },
+  "dependencies": {
+    "@run-cloud/sdk": "0.1.1",
+    "runcloud": "0.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

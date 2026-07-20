@@ -1,0 +1,107 @@
+name: Test examples
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      live:
+        description: Create one metered simulator session
+        required: true
+        default: false
+        type: boolean
+      platform:
+        description: Platform for the live smoke test
+        required: true
+        default: ios
+        type: choice
+        options:
+          - ios
+          - android
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            tests/package-lock.json
+            sdk-ios-android/package-lock.json
+            live-camera-relay/package-lock.json
+
+      - name: Install published-package test dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Install SDK example dependencies
+        working-directory: sdk-ios-android
+        run: npm ci
+
+      - name: Install camera example dependencies
+        working-directory: live-camera-relay
+        run: npm ci
+
+      - name: Test published onboarding artifacts
+        working-directory: tests
+        run: npm test
+
+      - name: Test SDK example
+        working-directory: sdk-ios-android
+        run: npm test
+
+      - name: Test parallel simulator example
+        working-directory: parallel-simulators
+        run: npm test
+
+      - name: Test mosaic example
+        working-directory: eight-device-mosaic
+        run: npm test
+
+      - name: Test camera example
+        working-directory: live-camera-relay
+        run: npm test
+
+      - name: Typecheck camera app
+        working-directory: live-camera-relay
+        run: npm run typecheck
+
+  live:
+    if: github.event_name == 'workflow_dispatch' && inputs.live == true
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install published packages
+        working-directory: tests
+        run: npm ci
+
+      - name: Run one live simulator lifecycle
+        working-directory: tests
+        env:
+          RUN_CLOUD_LIVE_E2E: "1"
+          RUN_CLOUD_LIVE_PLATFORM: ${{ inputs.platform }}
+          RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
+          RUN_CLOUD_API_URL: ${{ vars.RUN_CLOUD_API_URL || 'https://api.newly.app' }}
+        run: npm run test:live
