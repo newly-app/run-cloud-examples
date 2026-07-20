@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { Client } from '@run-cloud/sdk';
 
 const DEFAULT_URLS = {
@@ -6,11 +7,16 @@ const DEFAULT_URLS = {
   android: 'https://run.cloud',
 };
 
+const CODECS = ['auto', 'mjpeg', 'webrtc'];
+
 export function parseOptions(args) {
   const options = {
     platform: 'both',
     duration: 120,
+    codec: 'auto',
     open: false,
+    json: false,
+    keep: false,
     iosUrl: DEFAULT_URLS.ios,
     androidUrl: DEFAULT_URLS.android,
   };
@@ -21,11 +27,20 @@ export function parseOptions(args) {
       options.open = true;
       continue;
     }
-    if (argument === '--platform' || argument === '--duration' || argument === '--ios-url' || argument === '--android-url') {
+    if (argument === '--json') {
+      options.json = true;
+      continue;
+    }
+    if (argument === '--keep') {
+      options.keep = true;
+      continue;
+    }
+    if (argument === '--platform' || argument === '--duration' || argument === '--codec' || argument === '--ios-url' || argument === '--android-url') {
       const raw = args[index + 1];
       if (!raw) throw new Error(`${argument} requires a value.`);
       if (argument === '--platform') options.platform = raw;
       if (argument === '--duration') options.duration = Number(raw);
+      if (argument === '--codec') options.codec = raw;
       if (argument === '--ios-url') options.iosUrl = raw;
       if (argument === '--android-url') options.androidUrl = raw;
       index += 1;
@@ -40,6 +55,9 @@ export function parseOptions(args) {
 
   if (!['ios', 'android', 'both'].includes(options.platform)) {
     throw new Error('--platform must be ios, android, or both.');
+  }
+  if (!CODECS.includes(options.codec)) {
+    throw new Error('--codec must be auto, mjpeg, or webrtc.');
   }
   if (!Number.isInteger(options.duration) || options.duration < 1 || options.duration > 600) {
     throw new Error('--duration must be between 1 and 600 seconds.');
@@ -88,30 +106,49 @@ function requestedPlatforms(value) {
   return value === 'both' ? ['ios', 'android'] : [value];
 }
 
-async function releaseSessions(cloud, sessions) {
+function summarizeSession(session) {
+  return {
+    id: session.id,
+    platform: session.platform,
+    status: session.status,
+    url: session.url,
+    baseUrl: session.baseUrl,
+    codec: session.codec,
+    stream: session.stream,
+    expiresAt: session.expiresAt,
+  };
+}
+
+async function releaseSessions(cloud, sessions, { json = false } = {}) {
   if (sessions.length === 0) return;
-  console.log('\nReleasing sessions...');
+  if (!json) console.log('\nReleasing sessions...');
   const results = await Promise.allSettled(
     sessions.map((session) => cloud.simulators.delete(session.id, { platform: session.platform })),
   );
   results.forEach((result, index) => {
     const session = sessions[index];
+    if (json) return;
     if (result.status === 'fulfilled') console.log(`  released ${session.platform} ${session.id}`);
     else console.error(`  failed to release ${session.platform} ${session.id}: ${result.reason.message}`);
   });
 }
 
-export async function runDemo(args = process.argv.slice(2)) {
+export async function runDemo(args = process.argv.slice(2), clientOptions = {}) {
   const options = parseOptions(args);
   if (options.help) {
-    console.log('Usage: npm run demo -- [--platform ios|android|both] [--duration seconds] [--open] [--ios-url URL] [--android-url URL]');
+    console.log('Usage: npm run demo -- [--platform ios|android|both] [--codec auto|mjpeg|webrtc] [--duration seconds] [--open] [--json] [--keep] [--ios-url URL] [--android-url URL]');
     return;
   }
 
-  const cloud = new Client();
+  const cloud = new Client(clientOptions);
   const sessions = [];
 
   try {
+    const account = await cloud.account();
+    if (!options.json) {
+      console.log(`Account: ${account.meteringStatus ?? 'unknown metering'}; balance ${account.balanceMinutes ?? 'unknown'} minutes`);
+    }
+
     for (const platform of requestedPlatforms(options.platform)) {
       const session = await cloud.simulators.create({
         platform,
@@ -119,23 +156,35 @@ export async function runDemo(args = process.argv.slice(2)) {
         labels: { demo: 'sdk-ios-android' },
         inactivityTimeout: '60s',
         hardTimeout: '10m',
+        codec: options.codec,
       });
       sessions.push(session);
 
       const targetUrl = platform === 'ios' ? options.iosUrl : options.androidUrl;
       await cloud.simulators.openUrl(session.id, targetUrl, { platform });
-      console.log(`${platform}: ${session.url || session.baseUrl || session.id}`);
+      if (!options.json) console.log(`${platform}: ${session.url || session.baseUrl || session.id} (${session.codec})`);
       if (options.open && session.url) openBrowser(session.url);
     }
 
-    console.log(`\nKeeping ${sessions.length} session(s) live for ${options.duration} seconds. Press Ctrl+C to finish early.`);
+    if (options.json) {
+      console.log(JSON.stringify({ account, sessions: sessions.map(summarizeSession) }, null, 2));
+    }
+
+    if (options.keep) {
+      if (!options.json) console.log('\nLeaving sessions running. Release them from the dashboard or API when done.');
+      return;
+    }
+
+    if (!options.json) {
+      console.log(`\nKeeping ${sessions.length} session(s) live for ${options.duration} seconds. Press Ctrl+C to finish early.`);
+    }
     await waitForDemo(options.duration);
   } finally {
-    await releaseSessions(cloud, sessions);
+    if (!options.keep) await releaseSessions(cloud, sessions, { json: options.json });
   }
 }
 
-if (import.meta.url === new URL(process.argv[1], 'file:').href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runDemo().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

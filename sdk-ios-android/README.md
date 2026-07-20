@@ -30,6 +30,22 @@ npm run demo -- --platform ios --ios-url https://newly.app --open
 npm run demo -- --platform android --android-url https://run.cloud --open
 ```
 
+## Select a stream codec
+
+The API default is `auto`. You can force MJPEG or WebRTC when comparing stream
+paths:
+
+```bash
+npm run demo -- --platform ios --codec mjpeg
+npm run demo -- --platform android --codec webrtc
+```
+
+## Print machine-readable session details
+
+```bash
+npm run demo -- --platform both --json
+```
+
 The demo keeps sessions alive for 120 seconds by default. Change that with
 `--duration`:
 
@@ -37,4 +53,5 @@ The demo keeps sessions alive for 120 seconds by default. Change that with
 npm run demo -- --platform both --duration 60
 ```
 
-Press Ctrl+C to release sessions early.
+Press Ctrl+C to release sessions early. Add `--keep` to leave sessions running
+after the command prints their URLs.
