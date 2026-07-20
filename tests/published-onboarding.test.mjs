@@ -21,7 +21,7 @@ const cliEntry = join(cliDirectory, cliManifest.bin.runcloud);
 describe('published onboarding artifacts', () => {
   it('installs the released SDK and CLI versions from npm', () => {
     assert.equal(sdkManifest.version, '0.1.1');
-    assert.equal(cliManifest.version, '0.1.4');
+    assert.equal(cliManifest.version, '0.1.5');
   });
 
   it('resolves the public documentation used by onboarding', async () => {
@@ -102,7 +102,7 @@ describe('published onboarding artifacts', () => {
     const workspace = mkdtempSync(join(tmpdir(), 'run-cloud-onboarding-'));
     try {
       const version = await runCli(['--version'], workspace);
-      assert.equal(version.stdout.trim(), '0.1.4');
+      assert.equal(version.stdout.trim(), '0.1.5');
 
       await runCli(
         ['skills', 'install', '--agents', 'codex', '--scope', 'project', '--json'],
@@ -112,11 +112,13 @@ describe('published onboarding artifacts', () => {
         join(workspace, '.codex', 'skills', 'run-cloud-ios-simulator', 'SKILL.md'),
         'utf8',
       );
-      assert.match(skill, /version: 0\.5\.0/);
+      assert.match(skill, /version: 0\.5\.1/);
       assert.match(skill, /RUN_CLOUD_API_KEY.*RUN_CLOUD_API_URL/s);
       assert.match(skill, /Do not require both a saved login and an API key/);
       assert.match(skill, /runcloud demo run parallel-simulators --open/);
       assert.match(skill, /ios-simulator:session-restart-requested/);
+      assert.match(skill, /https:\/\/docs\.run\.cloud\/cli\/typescript-sdk/);
+      assert.doesNotMatch(skill, /https:\/\/run\.cloud\/cli\/typescript-sdk/);
       assert.doesNotMatch(skill, /@run-cloud\/sdk\/compat\//);
     } finally {
       rmSync(workspace, { recursive: true, force: true });

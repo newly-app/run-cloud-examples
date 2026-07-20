@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@run-cloud/sdk": "0.1.1",
-    "runcloud": "0.1.4"
+    "runcloud": "0.1.5"
   },
   "engines": {
     "node": ">=20"
