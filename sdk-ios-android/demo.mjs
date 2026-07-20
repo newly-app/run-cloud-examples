@@ -119,6 +119,14 @@ function summarizeSession(session) {
   };
 }
 
+function accountMeteringStatus(account) {
+  return account.meteringStatus ?? account.run_cloud_metering_status ?? 'unknown metering';
+}
+
+function accountBalanceMinutes(account) {
+  return account.balanceMinutes ?? account.run_cloud_balance_minutes ?? 'unknown';
+}
+
 async function releaseSessions(cloud, sessions, { json = false } = {}) {
   if (sessions.length === 0) return;
   if (!json) console.log('\nReleasing sessions...');
@@ -146,7 +154,7 @@ export async function runDemo(args = process.argv.slice(2), clientOptions = {}) 
   try {
     const account = await cloud.account();
     if (!options.json) {
-      console.log(`Account: ${account.meteringStatus ?? 'unknown metering'}; balance ${account.balanceMinutes ?? 'unknown'} minutes`);
+      console.log(`Account: ${accountMeteringStatus(account)}; balance ${accountBalanceMinutes(account)} minutes`);
     }
 
     for (const platform of requestedPlatforms(options.platform)) {

@@ -31,7 +31,7 @@ describe('sdk-ios-android example', () => {
       requests.push({ url: String(url), method: init.method, body: init.body ? JSON.parse(init.body) : undefined });
 
       if (String(url).endsWith('/run-cloud/account')) {
-        return json({ meteringStatus: 'active', balanceMinutes: '100' });
+        return json({ run_cloud_metering_status: 'active', run_cloud_balance_minutes: '100' });
       }
       if (String(url).endsWith('/run-cloud/ios') && init.method === 'POST') {
         return json(session('ios', init.body));
