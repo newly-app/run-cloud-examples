@@ -6,7 +6,7 @@ URLs inside them, and release every session when the demo exits.
 ## Requirements
 
 - Node.js 20 or newer
-- A run.cloud API key with `run_cloud.read` and `run_cloud.write` scopes
+- A run.cloud API key created in the [dashboard](https://run.cloud/dashboard)
 - run.cloud simulator access, capacity, and enough balance for the requested
   sessions
 
@@ -16,6 +16,11 @@ npm install
 ```
 
 `RUN_CLOUD_API_URL` can point the SDK at a non-default API host.
+
+This project follows the public
+[TypeScript SDK guide](https://run.cloud/cli/typescript-sdk) and uses the SDK
+surface implemented by `@run-cloud/sdk`: `account`, `ios`, `android`,
+`simulators`, and session cleanup through `delete`.
 
 ## Run both platforms
 
@@ -54,4 +59,5 @@ npm run demo -- --platform both --duration 60
 ```
 
 Press Ctrl+C to release sessions early. Add `--keep` to leave sessions running
-after the command prints their URLs.
+after the command prints their URLs. When `--keep` is omitted, cleanup also runs
+after API errors, SIGINT, and SIGTERM.

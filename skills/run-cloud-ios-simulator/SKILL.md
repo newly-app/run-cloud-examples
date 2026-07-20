@@ -1,97 +1,125 @@
 ---
 name: run-cloud-ios-simulator
-description: Configure and use run.cloud for agent sandboxes, provider-compatible migrations, and iOS simulator sessions.
-version: 0.3.0
+description: Use run.cloud SDK and CLI workflows for iOS simulator and Android emulator sessions.
+version: 0.5.0
 ---
 
-# run.cloud Agent Runtime
+# run.cloud Mobile Sessions
 
-Use this skill when a user asks an agent to adopt run.cloud, migrate an existing
-sandbox integration, or run, inspect, smoke test, or debug an iOS app through
-run.cloud.
+Use this skill when a user asks an agent to create, inspect, smoke test, debug,
+or release an iOS simulator or Android emulator through run.cloud.
 
 ## Requirements
 
-- Read the API credential from `RUN_CLOUD_API_KEY`. Never print it, commit it,
-  or write it into a skill file.
-- Use `RUN_CLOUD_API_URL` when set; otherwise use `https://api.newly.app`.
-- Existing iOS simulator commands require authentication with `runcloud login`.
-- The account must have run.cloud access and a positive run.cloud balance.
-- App artifacts should be simulator-compatible builds. Device App Store IPAs may
-  fail to install on iOS Simulator.
+- Read SDK credentials from `RUN_CLOUD_API_KEY`. Never print it, commit it,
+  or write it into a skill file. The SDK uses `RUN_CLOUD_API_URL` when set and
+  otherwise defaults to `https://api.newly.app`.
+- Authenticate the CLI with either a saved `runcloud login` credential or
+  `RUN_CLOUD_API_KEY` together with `RUN_CLOUD_API_URL`. Do not require both a
+  saved login and an API key.
+- The TypeScript SDK requires Node.js 20 or newer.
+- The account must have run.cloud access, available capacity, and a positive
+  run.cloud balance.
+- App artifacts must match the target platform. iOS sessions need
+  simulator-compatible builds; Android sessions need Android-compatible
+  artifacts such as APKs.
 
-## Detect the Existing Sandbox Provider
+## TypeScript SDK
 
-Before changing dependencies or imports, inspect package manifests, lockfiles,
-source imports, and provider-specific environment variable names. Check for
-these signals:
+Prefer `@run-cloud/sdk` for applications, CI, and agent code:
 
-| Provider | Common package/import signal | run.cloud compatibility entry point |
-| --- | --- | --- |
-| Modal | `modal` | `run_cloud.compat.modal` |
-| E2B | `e2b`, `@e2b/code-interpreter` | `run_cloud.compat.e2b` |
-| Blaxel | `blaxel` | `run_cloud.compat.blaxel` |
-| CodeSandbox | `@codesandbox/sdk` | `@run-cloud/sdk/compat/codesandbox` |
-| Vercel Sandbox | `@vercel/sandbox` | `@run-cloud/sdk/compat/vercel` |
-| Cloudflare Sandbox | `@cloudflare/sandbox` | `@run-cloud/sdk/compat/cloudflare` |
-| Fly Machines | `@flydotio/machines` | `@run-cloud/sdk/compat/fly` |
-| Daytona | `daytona` | `run_cloud.compat.daytona` |
+```bash
+npm install @run-cloud/sdk
+```
 
-When a provider is detected:
+Use the platform client when the platform is known, and always release metered
+sessions in `finally`:
 
-1. Preserve the existing provider-shaped API and change only the integration
-   boundary.
-2. Use the matching compatibility entry point only after confirming its package
-   resolves through the project's package manager or configured registry.
-3. Run the existing provider integration tests after the import change.
-   Provider-specific images, networking, regions, and lifecycle options still
-   require explicit validation.
-4. If more than one provider is present, map each call site independently and
-   report the result. Do not choose one globally.
+```ts
+import { Client } from "@run-cloud/sdk";
 
-When no provider is detected, prefer native `runcloud` CLI commands for
-supported operations. Use a native run.cloud SDK only after confirming that
-package resolves; never invent or guess an unpublished package.
+const cloud = new Client();
+const session = await cloud.ios.create({
+  displayName: "Agent smoke",
+  labels: { owner: "agent" },
+  inactivityTimeout: "60s",
+});
 
-## iOS Simulator Workflow
+try {
+  await cloud.ios.openUrl(session.id, "https://run.cloud");
+  console.log(session.url);
+} finally {
+  await cloud.ios.delete(session.id);
+}
+```
 
-1. Check access:
+Use `cloud.android` for Android. When the platform is selected at runtime, use
+`cloud.simulators` and pass `session.platform` to `get`, `openUrl`, or `delete`.
 
-   ```bash
-   runcloud account --json
-   ```
+The implemented SDK surface is:
 
-2. Upload or directly install a build:
+- `cloud.account()`;
+- `cloud.ios` and `cloud.android`: `create`, `list`, `get`, `openUrl`, `delete`;
+- `cloud.simulators`: the same lifecycle with a runtime `platform` option;
+- `cloud.assets`: `upload`, `list`, `delete`.
 
-   ```bash
-   runcloud asset push ./build/MyApp.tar.gz -n my-app --json
-   runcloud ios create --install-asset my-app --json
-   ```
+Do not invent screenshot, tap, typing, recording, app lifecycle, sandbox, build,
+or compatibility-adapter methods. Check the installed package types and
+https://run.cloud/cli/typescript-sdk before using a method not listed here.
 
-   or:
+## CLI Workflow
 
-   ```bash
-   runcloud ios create --install ./build/MyApp.tar.gz --json
-   ```
+Use the CLI for interactive terminal work. Authenticate with a saved login:
 
-3. Save the returned session id and URL.
+```bash
+npm install -g runcloud
+runcloud login
+```
 
-4. Use the URL for visual inspection. Use CLI interaction commands when
-   available:
+Or authenticate non-interactively with both required environment variables:
 
-   ```bash
-   runcloud ios open-url myapp://settings --id "$SESSION_ID"
-   ```
+```bash
+export RUN_CLOUD_API_KEY="rc_live_..."
+export RUN_CLOUD_API_URL="https://api.newly.app"
+```
 
-5. Release the session:
+Then inspect the account:
 
-   ```bash
-   runcloud ios delete "$SESSION_ID"
-   ```
+```bash
+runcloud account --json
+```
 
-## Simulator Demos
+Create, inspect, open a URL, and release an iOS session:
 
-When `runcloud demo run --help` succeeds, run:
+```bash
+runcloud ios create --install ./build/MyApp.tar.gz --json
+runcloud ios get "$SESSION_ID" --json
+runcloud ios open-url myapp://settings --id "$SESSION_ID"
+runcloud ios delete "$SESSION_ID" --json
+```
+
+Use the corresponding `runcloud android` commands with an Android artifact for
+Android emulator sessions.
+
+## Runnable SDK Example
+
+The maintained example checks account state, creates iOS and Android sessions,
+opens a URL on each, and releases both sessions:
+
+```bash
+git clone --depth 1 https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/sdk-ios-android
+npm install
+npm run demo -- --platform both --open
+```
+
+Use `--platform ios` or `--platform android` for one platform. Use `--json` for
+machine-readable output. The example releases sessions on completion, failure,
+SIGINT, and SIGTERM unless the user explicitly passes `--keep`.
+
+## Bundled CLI Demos
+
+These published demos exercise multi-simulator workflows:
 
 ```bash
 runcloud demo run parallel-simulators --open
@@ -99,32 +127,31 @@ runcloud demo run eight-device-mosaic --open
 runcloud demo run live-camera-relay --open
 ```
 
-Otherwise clone `https://github.com/newly-app/run-cloud-examples` and follow
-the matching example directory. The parallel demo creates three independent
-sessions. The mosaic coordinates eight sessions in a 4x2 animated display. The
-camera relay connects a webcam to one simulator camera and relays its real
-WebRTC video to two receivers. All demos release every session automatically
-and require the existing `runcloud login` simulator credential in addition to
-the API key.
+They use the same CLI authentication choices described above and release every
+session automatically.
 
 ## Embedded Iframes
 
-- Use `runcloud ios create --inactivity-timeout 60s --json` when the embed
-  should auto-close after user inactivity. Omit the flag or pass `none` when the
-  user needs a metered session without idle auto-close.
+- Use `inactivityTimeout: "60s"` in the SDK, or
+  `--inactivity-timeout 60s` in the CLI, when an embed should auto-close after
+  user inactivity.
+- Omit the option or pass `null`/`none` when the user needs a metered session
+  without idle auto-close.
+- Treat the returned signed session URL as a secret. Do not publish it in logs.
 - Iframes post `ios-simulator:status`, `ios-simulator:auth-error`,
-  `ios-simulator:session-ended`, and `ios-simulator:session-restart-requested` to the
-  parent window. Verify `event.source` before acting on a message.
-- If `ios-simulator:session-restart-requested` arrives, create a fresh run.cloud
+  `ios-simulator:session-ended`, and
+  `ios-simulator:session-restart-requested` messages to the parent window.
+- Verify `event.source` before acting on iframe messages.
+- When `ios-simulator:session-restart-requested` arrives, create a fresh
   session; do not reuse the ended iframe URL.
 
-## Agent Rules
+## Rules
 
-- Prefer `--json` for every command whose output will be parsed.
-- Detect existing provider usage before proposing SDK changes.
-- Do not install an adapter until its package is resolvable.
-- Always release sessions you create unless the user asks to keep them open.
-- If installation fails, verify that the artifact is a simulator build before
-  attempting code changes.
+- Prefer the SDK for code and `--json` CLI output for shell automation.
+- Always release sessions created during a task unless the user asks to keep
+  them open.
+- If installation fails, verify that the artifact matches the target platform
+  before changing code.
 - Do not assume a local tunnel is installed on the user's machine.
-- Do not expose iOS simulator tokens in logs or screenshots.
+- Do not expose API keys, CLI tokens, signed simulator URLs, or simulator tokens
+  in logs or screenshots.
