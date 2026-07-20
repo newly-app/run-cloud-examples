@@ -1,7 +1,7 @@
 ---
 name: run-cloud-ios-simulator
 description: Use run.cloud SDK and CLI workflows for iOS simulator and Android emulator sessions.
-version: 0.5.0
+version: 0.5.1
 ---
 
 # run.cloud Mobile Sessions
@@ -65,7 +65,7 @@ The implemented SDK surface is:
 
 Do not invent screenshot, tap, typing, recording, app lifecycle, sandbox, build,
 or compatibility-adapter methods. Check the installed package types and
-https://run.cloud/cli/typescript-sdk before using a method not listed here.
+https://docs.run.cloud/cli/typescript-sdk before using a method not listed here.
 
 ## CLI Workflow
 

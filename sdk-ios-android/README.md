@@ -18,7 +18,7 @@ npm install
 `RUN_CLOUD_API_URL` can point the SDK at a non-default API host.
 
 This project follows the public
-[TypeScript SDK guide](https://run.cloud/cli/typescript-sdk) and uses the SDK
+[TypeScript SDK guide](https://docs.run.cloud/cli/typescript-sdk) and uses the SDK
 surface implemented by `@run-cloud/sdk`: `account`, `ios`, `android`,
 `simulators`, and session cleanup through `delete`.
 
