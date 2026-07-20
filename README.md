@@ -3,6 +3,23 @@
 Runnable projects for trying run.cloud locally. Each example is self-contained
 and includes its own requirements, commands, and cleanup behavior.
 
+## Start with the TypeScript SDK
+
+The SDK quickstart uses the same API-key flow and mobile session lifecycle as
+the [run.cloud TypeScript SDK docs](https://run.cloud/cli/typescript-sdk). It
+checks account state, creates iOS and Android sessions, opens URLs, and releases
+every session automatically.
+
+```bash
+git clone --depth 1 https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/sdk-ios-android
+npm install
+npm run demo -- --platform both --open
+```
+
+See [sdk-ios-android/README.md](sdk-ios-android/README.md) for platform, codec,
+duration, JSON-output, and cleanup options.
+
 ## Examples
 
 ### Parallel iOS simulators
@@ -48,23 +65,8 @@ npm run demo -- --open
 See [live-camera-relay/README.md](live-camera-relay/README.md) for camera
 permissions, session requirements, and the local Expo workflow.
 
-### SDK iOS and Android sessions
-
-Use `@run-cloud/sdk` to create iOS simulator and Android emulator sessions,
-open URLs inside them, and release sessions from TypeScript or Node.js code.
-
-```bash
-git clone https://github.com/newly-app/run-cloud-examples.git
-cd run-cloud-examples/sdk-ios-android
-npm install
-npm run demo -- --platform both --open
-```
-
-See [sdk-ios-android/README.md](sdk-ios-android/README.md) for API key setup,
-platform-specific options, and cleanup behavior.
-
 ## Agent skill
 
-The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) helps
-Claude Code, Codex, and Cursor detect an existing sandbox provider before
-choosing a native run.cloud integration or a compatible migration path.
+The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) teaches
+Claude Code, Codex, and Cursor the implemented SDK and CLI lifecycle, including
+credential boundaries and required session cleanup.
