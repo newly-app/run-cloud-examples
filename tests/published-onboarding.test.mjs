@@ -11,6 +11,7 @@ import { Client } from '@run-cloud/sdk';
 
 const execFileAsync = promisify(execFile);
 const testDirectory = dirname(fileURLToPath(import.meta.url));
+const repositoryDirectory = dirname(testDirectory);
 const sdkDirectory = join(testDirectory, 'node_modules', '@run-cloud', 'sdk');
 const cliDirectory = join(testDirectory, 'node_modules', 'runcloud');
 const sdkManifest = readJson(join(sdkDirectory, 'package.json'));
@@ -21,6 +22,27 @@ describe('published onboarding artifacts', () => {
   it('installs the released SDK and CLI versions from npm', () => {
     assert.equal(sdkManifest.version, '0.1.1');
     assert.equal(cliManifest.version, '0.1.4');
+  });
+
+  it('resolves the public documentation used by onboarding', async () => {
+    const pages = [
+      ['https://docs.run.cloud/cli/quickstart', /The CLI accepts either/],
+      ['https://docs.run.cloud/cli/typescript-sdk', /@run-cloud\/sdk/],
+    ];
+
+    for (const [url, expected] of pages) {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+      assert.equal(response.status, 200, `${url} returned ${response.status}`);
+      assert.match(await response.text(), expected);
+    }
+
+    const sourceSkill = readFileSync(
+      join(repositoryDirectory, 'skills', 'run-cloud-ios-simulator', 'SKILL.md'),
+      'utf8',
+    );
+    assert.match(sourceSkill, /version: 0\.5\.1/);
+    assert.match(sourceSkill, /https:\/\/docs\.run\.cloud\/cli\/typescript-sdk/);
+    assert.doesNotMatch(sourceSkill, /https:\/\/run\.cloud\/cli\/typescript-sdk/);
   });
 
   it('runs the documented SDK lifecycle from the published package', async () => {

@@ -6,7 +6,7 @@ and includes its own requirements, commands, and cleanup behavior.
 ## Start with the TypeScript SDK
 
 The SDK quickstart uses the same API-key flow and mobile session lifecycle as
-the [run.cloud TypeScript SDK docs](https://run.cloud/cli/typescript-sdk). It
+the [run.cloud TypeScript SDK docs](https://docs.run.cloud/cli/typescript-sdk). It
 checks account state, creates iOS and Android sessions, opens URLs, and releases
 every session automatically.
 
