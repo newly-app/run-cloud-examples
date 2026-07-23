@@ -22,20 +22,6 @@ duration, JSON-output, and cleanup options.
 
 ## Examples
 
-### Parallel iOS simulators
-
-Start two or three iOS simulator sessions concurrently, open a different page
-in each, and automatically release every session when the demo finishes.
-
-```bash
-git clone https://github.com/newly-app/run-cloud-examples.git
-cd run-cloud-examples/parallel-simulators
-npm run demo -- --count 3 --duration 120 --open
-```
-
-See [parallel-simulators/README.md](parallel-simulators/README.md) for account
-requirements and additional options.
-
 ### Eight-device mosaic
 
 Coordinate eight live iOS simulator browsers into one synchronized 4-by-2
@@ -69,7 +55,7 @@ permissions, session requirements, and the local Expo workflow.
 
 The published-artifact suite installs exact npm releases, exercises the SDK
 against a mock API, installs the bundled agent skill, and scaffolds and verifies
-all three CLI demos without creating metered sessions:
+the maintained CLI demos without creating metered sessions:
 
 ```bash
 cd tests

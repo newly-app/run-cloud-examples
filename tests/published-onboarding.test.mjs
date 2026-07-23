@@ -115,7 +115,6 @@ describe('published onboarding artifacts', () => {
       assert.match(skill, /version: 0\.5\.1/);
       assert.match(skill, /RUN_CLOUD_API_KEY.*RUN_CLOUD_API_URL/s);
       assert.match(skill, /Do not require both a saved login and an API key/);
-      assert.match(skill, /runcloud demo run parallel-simulators --open/);
       assert.match(skill, /ios-simulator:session-restart-requested/);
       assert.match(skill, /https:\/\/docs\.run\.cloud\/cli\/typescript-sdk/);
       assert.doesNotMatch(skill, /https:\/\/run\.cloud\/cli\/typescript-sdk/);
@@ -198,7 +197,7 @@ describe('published onboarding artifacts', () => {
     assert.equal(requests[1].body.inactivityTimeout, '60s');
   });
 
-  for (const name of ['parallel-simulators', 'eight-device-mosaic', 'live-camera-relay']) {
+  for (const name of ['eight-device-mosaic', 'live-camera-relay']) {
     it(`scaffolds and verifies the published ${name} demo`, async () => {
       const workspace = mkdtempSync(join(tmpdir(), `run-cloud-${name}-`));
       const demoDirectory = join(workspace, 'demo');
