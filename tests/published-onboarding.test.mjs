@@ -20,8 +20,8 @@ const cliEntry = join(cliDirectory, cliManifest.bin.runcloud);
 
 describe('published onboarding artifacts', () => {
   it('installs the released SDK and CLI versions from npm', () => {
-    assert.equal(sdkManifest.version, '0.1.1');
-    assert.equal(cliManifest.version, '0.1.5');
+    assert.equal(sdkManifest.version, '0.4.0');
+    assert.equal(cliManifest.version, '0.1.6');
   });
 
   it('resolves the public documentation used by onboarding', async () => {
@@ -40,7 +40,7 @@ describe('published onboarding artifacts', () => {
       join(repositoryDirectory, 'skills', 'run-cloud-ios-simulator', 'SKILL.md'),
       'utf8',
     );
-    assert.match(sourceSkill, /version: 0\.5\.1/);
+    assert.match(sourceSkill, /version: 0\.6\.0/);
     assert.match(sourceSkill, /https:\/\/docs\.run\.cloud\/cli\/typescript-sdk/);
     assert.doesNotMatch(sourceSkill, /https:\/\/run\.cloud\/cli\/typescript-sdk/);
   });
@@ -102,7 +102,7 @@ describe('published onboarding artifacts', () => {
     const workspace = mkdtempSync(join(tmpdir(), 'run-cloud-onboarding-'));
     try {
       const version = await runCli(['--version'], workspace);
-      assert.equal(version.stdout.trim(), '0.1.5');
+      assert.equal(version.stdout.trim(), '0.1.6');
 
       await runCli(
         ['skills', 'install', '--agents', 'codex', '--scope', 'project', '--json'],
@@ -155,7 +155,7 @@ describe('published onboarding artifacts', () => {
     const apiUrl = await listen(server);
     const workspace = mkdtempSync(join(tmpdir(), 'run-cloud-cli-lifecycle-'));
     const env = {
-      RUN_CLOUD_API_KEY: 'rc_cli_test',
+      RUN_CLOUD_API_KEY: 'rc_live_cli_test',
       RUN_CLOUD_API_URL: apiUrl,
     };
 
@@ -193,7 +193,7 @@ describe('published onboarding artifacts', () => {
       ['POST', '/run-cloud/ios/ios-session/open-url'],
       ['DELETE', '/run-cloud/ios/ios-session'],
     ]);
-    assert.ok(requests.every(({ authorization }) => authorization === 'Bearer rc_cli_test'));
+    assert.ok(requests.every(({ authorization }) => authorization === 'Bearer rc_live_cli_test'));
     assert.equal(requests[1].body.inactivityTimeout, '60s');
   });
 

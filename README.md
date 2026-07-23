@@ -22,6 +22,21 @@ duration, JSON-output, and cleanup options.
 
 ## Examples
 
+### Real iOS app screenshot
+
+Build a native iOS app from Swift source, upload and launch it in a simulator,
+then save the simulator screenshot as raw PNG bytes.
+
+```bash
+git clone https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/ios-app-screenshot
+npm install
+RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --open
+```
+
+See [ios-app-screenshot/README.md](ios-app-screenshot/README.md) for the Xcode
+requirement, custom app archives, output paths, and cleanup behavior.
+
 ### Eight-device mosaic
 
 Coordinate eight live iOS simulator browsers into one synchronized 4-by-2
