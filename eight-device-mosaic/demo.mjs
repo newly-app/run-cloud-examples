@@ -82,6 +82,7 @@ function escapeHtml(value) {
 
 function embedUrl(value) {
   const url = new URL(value);
+  url.searchParams.set('embed', '1');
   url.searchParams.set('loadingGuard', '1');
   return url.toString();
 }
