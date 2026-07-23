@@ -60,7 +60,7 @@ test('renders three signed embeds while keeping credentials out of the local URL
   const html = cameraViewerHtml(demoSessions, 60, 'room-12345678', 1_000);
   assert.equal((html.match(/<iframe /g) || []).length, 3);
   assert.match(html, /embed=1/);
-  assert.match(html, /loadingGuard=1/);
+  assert.doesNotMatch(html, /loadingGuard=1/);
   assert.match(html, /Connect webcam/);
   assert.match(html, /com\.apple\.mobilesafari/);
   assert.match(html, /audio: false/);
