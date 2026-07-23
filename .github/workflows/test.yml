@@ -60,10 +60,6 @@ jobs:
         working-directory: sdk-ios-android
         run: npm test
 
-      - name: Test parallel simulator example
-        working-directory: parallel-simulators
-        run: npm test
-
       - name: Test mosaic example
         working-directory: eight-device-mosaic
         run: npm test

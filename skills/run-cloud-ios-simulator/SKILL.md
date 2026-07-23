@@ -122,7 +122,6 @@ SIGINT, and SIGTERM unless the user explicitly passes `--keep`.
 These published demos exercise multi-simulator workflows:
 
 ```bash
-runcloud demo run parallel-simulators --open
 runcloud demo run eight-device-mosaic --open
 runcloud demo run live-camera-relay --open
 ```
