@@ -233,13 +233,13 @@ export default function App() {
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: true,
         audio: true,
       });
     } catch (withAudioError) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: true,
           audio: false,
         });
       } catch (videoError) {
