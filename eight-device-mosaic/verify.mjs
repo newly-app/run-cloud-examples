@@ -26,6 +26,7 @@ test('renders eight signed embeds without printing them into the viewer URL', as
   }));
   const html = mosaicViewerHtml(sessions, 60, 1_000);
   assert.equal((html.match(/<iframe /g) || []).length, 8);
+  assert.match(html, /embed=1/);
   assert.match(html, /loadingGuard=1/);
   assert.match(html, /const deadline = 61000/);
 
