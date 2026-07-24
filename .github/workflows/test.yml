@@ -38,6 +38,7 @@ jobs:
           cache-dependency-path: |
             tests/package-lock.json
             sdk-ios-android/package-lock.json
+            ios-app-screenshot/package-lock.json
             live-camera-relay/package-lock.json
 
       - name: Install published-package test dependencies
@@ -46,6 +47,10 @@ jobs:
 
       - name: Install SDK example dependencies
         working-directory: sdk-ios-android
+        run: npm ci
+
+      - name: Install app screenshot example dependencies
+        working-directory: ios-app-screenshot
         run: npm ci
 
       - name: Install camera example dependencies
@@ -58,6 +63,10 @@ jobs:
 
       - name: Test SDK example
         working-directory: sdk-ios-android
+        run: npm test
+
+      - name: Test app screenshot example
+        working-directory: ios-app-screenshot
         run: npm test
 
       - name: Test mosaic example

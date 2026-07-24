@@ -1,7 +1,7 @@
 ---
 name: run-cloud-ios-simulator
 description: Use run.cloud SDK and CLI workflows for iOS simulator and Android emulator sessions.
-version: 0.5.1
+version: 0.6.0
 ---
 
 # run.cloud Mobile Sessions
@@ -59,12 +59,14 @@ Use `cloud.android` for Android. When the platform is selected at runtime, use
 The implemented SDK surface is:
 
 - `cloud.account()`;
-- `cloud.ios` and `cloud.android`: `create`, `list`, `get`, `openUrl`, `delete`;
+- `cloud.ios`: `create`, `list`, `get`, `openUrl`, `screenshot`,
+  `uploadVideo`, `uploadMicrophoneAudio`, `delete`;
+- `cloud.android`: `create`, `list`, `get`, `openUrl`, `delete`;
 - `cloud.simulators`: the same lifecycle with a runtime `platform` option;
 - `cloud.assets`: `upload`, `list`, `delete`.
 
-Do not invent screenshot, tap, typing, recording, app lifecycle, sandbox, build,
-or compatibility-adapter methods. Check the installed package types and
+Do not invent tap, typing, recording, app lifecycle, build, or
+compatibility-adapter methods. Check the installed package types and
 https://docs.run.cloud/cli/typescript-sdk before using a method not listed here.
 
 ## CLI Workflow
@@ -116,6 +118,17 @@ npm run demo -- --platform both --open
 Use `--platform ios` or `--platform android` for one platform. Use `--json` for
 machine-readable output. The example releases sessions on completion, failure,
 SIGINT, and SIGTERM unless the user explicitly passes `--keep`.
+
+To build a real native app, upload it, and save a simulator screenshot:
+
+```bash
+cd run-cloud-examples/ios-app-screenshot
+npm install
+npm run demo -- --open
+```
+
+This example requires macOS with Xcode. It deletes both the simulator session
+and uploaded app asset in `finally`.
 
 ## Bundled CLI Demos
 

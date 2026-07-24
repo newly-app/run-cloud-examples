@@ -1,9 +1,10 @@
 {
-  "name": "run-cloud-sdk-ios-android-demo",
+  "name": "run-cloud-ios-app-screenshot-demo",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "build:app": "node build-app.mjs",
     "demo": "node demo.mjs",
     "test": "node --test verify.mjs"
   },
