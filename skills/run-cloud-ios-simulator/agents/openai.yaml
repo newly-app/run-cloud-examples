@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Cloud Mobile Sessions"
+  short_description: "Operate remote iOS and Android sessions"
+  default_prompt: "Use $run-cloud-ios-simulator to create, inspect, test, and clean up run.cloud mobile sessions."
