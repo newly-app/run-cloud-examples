@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Cloud"
+  short_description: "Route run.cloud work to focused agent skills"
+  default_prompt: "Use $run-cloud to select the focused run.cloud skill for this task."
