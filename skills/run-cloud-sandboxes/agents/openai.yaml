@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Cloud Sandboxes"
+  short_description: "Operate secure remote microVM sandboxes"
+  default_prompt: "Use $run-cloud-sandboxes to create, operate, and clean up run.cloud sandboxes."
