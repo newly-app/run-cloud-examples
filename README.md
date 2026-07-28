@@ -95,6 +95,14 @@ so normal pull requests never create paid sessions.
 
 ## Agent skill
 
-The [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) teaches
-Claude Code, Codex, and Cursor the implemented SDK and CLI lifecycle, including
-credential boundaries and required session cleanup.
+[![skills.sh](https://skills.sh/b/newly-app/run-cloud-examples)](https://skills.sh/newly-app/run-cloud-examples/run-cloud-ios-simulator)
+
+Install the [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) for
+Claude Code, Codex, Cursor, and other supported agents:
+
+```bash
+npx skills add newly-app/run-cloud-examples --skill run-cloud-ios-simulator
+```
+
+It covers the implemented SDK and CLI lifecycle, credential boundaries, local
+iOS tunnels, media injection, embeds, and required session cleanup.
