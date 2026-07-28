@@ -69,7 +69,7 @@ permissions, session requirements, and the local Expo workflow.
 ## Verify the published onboarding
 
 The published-artifact suite installs exact npm releases, exercises the SDK
-against a mock API, installs the bundled agent skill, and scaffolds and verifies
+against a mock API, installs the bundled agent skills, and scaffolds and verifies
 the maintained CLI demos without creating metered sessions:
 
 ```bash
@@ -93,16 +93,25 @@ Set `RUN_CLOUD_LIVE_PLATFORM=android` to test Android instead. The GitHub
 Actions workflow exposes the same live test through an explicit manual dispatch
 so normal pull requests never create paid sessions.
 
-## Agent skill
+## Agent skills
 
-[![skills.sh](https://skills.sh/b/newly-app/run-cloud-examples)](https://skills.sh/newly-app/run-cloud-examples/run-cloud-ios-simulator)
+[![skills.sh](https://skills.sh/b/newly-app/run-cloud-examples)](https://skills.sh/newly-app/run-cloud-examples)
 
-Install the [run.cloud agent skill](skills/run-cloud-ios-simulator/SKILL.md) for
-Claude Code, Codex, Cursor, and other supported agents:
+Install all three run.cloud skills for Claude Code, Codex, Cursor, and other
+supported agents:
 
 ```bash
-npx skills add newly-app/run-cloud-examples --skill run-cloud-ios-simulator
+npx skills add newly-app/run-cloud-examples
 ```
 
-It covers the implemented SDK and CLI lifecycle, credential boundaries, local
-iOS tunnels, media injection, embeds, and required session cleanup.
+The package contains:
+
+- [`run-cloud`](skills/run-cloud/SKILL.md), a thin router that points agents to
+  the appropriate focused skill
+- [`run-cloud-ios-simulator`](skills/run-cloud-ios-simulator/SKILL.md), for
+  remote iOS simulator and Android emulator sessions
+- [`run-cloud-sandboxes`](skills/run-cloud-sandboxes/SKILL.md), for microVM
+  compute, commands, files, snapshots, images, networking, secrets, and cleanup
+
+To install only one focused skill, pass `--skill run-cloud-ios-simulator` or
+`--skill run-cloud-sandboxes`.
