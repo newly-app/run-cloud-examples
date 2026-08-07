@@ -106,13 +106,18 @@ function requestedPlatforms(value) {
   return value === 'both' ? ['ios', 'android'] : [value];
 }
 
+export function requireSessionUrl(session) {
+  if (typeof session.url !== 'string' || session.url.length === 0) {
+    throw new Error(`${session.platform} session ${session.id} did not return a signed URL.`);
+  }
+  return session.url;
+}
+
 function summarizeSession(session) {
   return {
     id: session.id,
     platform: session.platform,
     status: session.status,
-    url: session.url,
-    baseUrl: session.baseUrl,
     codec: session.codec,
     stream: session.stream,
     expiresAt: session.expiresAt,
@@ -161,17 +166,18 @@ export async function runDemo(args = process.argv.slice(2), clientOptions = {}) 
       const session = await cloud.simulators.create({
         platform,
         displayName: `sdk-${platform}-demo`,
-        labels: { demo: 'sdk-ios-android' },
+        tags: { demo: 'sdk-ios-android' },
         inactivityTimeout: '60s',
         hardTimeout: '10m',
         codec: options.codec,
       });
       sessions.push(session);
+      const sessionUrl = requireSessionUrl(session);
 
       const targetUrl = platform === 'ios' ? options.iosUrl : options.androidUrl;
       await cloud.simulators.openUrl(session.id, targetUrl, { platform });
-      if (!options.json) console.log(`${platform}: ${session.url || session.baseUrl || session.id} (${session.codec})`);
-      if (options.open && session.url) openBrowser(session.url);
+      if (!options.json) console.log(`${platform}: ${session.id} (${session.codec})`);
+      if (options.open) openBrowser(sessionUrl);
     }
 
     if (options.json) {

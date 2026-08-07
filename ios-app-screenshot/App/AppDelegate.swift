@@ -16,66 +16,246 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-final class ProofViewController: UIViewController {
+final class ProofViewController: UIViewController, UITextFieldDelegate, UIScrollViewDelegate {
     private let gradient = CAGradientLayer()
+    private let tapState = ProofViewController.status("Tap count: 0", id: "tap-state")
+    private let swipeState = ProofViewController.status("Swipe: idle", id: "swipe-state")
+    private let gestureState = ProofViewController.status("Gesture: idle", id: "gesture-state")
+    private let keyState = ProofViewController.status("Key: none", id: "key-state")
+    private var tapCount = 0
 
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        .lightContent
+    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+    override var canBecomeFirstResponder: Bool { true }
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            keyCommand(UIKeyCommand.inputUpArrow, name: "ArrowUp"),
+            keyCommand(UIKeyCommand.inputDownArrow, name: "ArrowDown"),
+            keyCommand(UIKeyCommand.inputLeftArrow, name: "ArrowLeft"),
+            keyCommand(UIKeyCommand.inputRightArrow, name: "ArrowRight"),
+            keyCommand("\r", name: "Enter"),
+            keyCommand("\u{1b}", name: "Escape"),
+        ]
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         gradient.colors = [
             UIColor(red: 0.02, green: 0.05, blue: 0.08, alpha: 1).cgColor,
-            UIColor(red: 0.03, green: 0.13, blue: 0.17, alpha: 1).cgColor,
+            UIColor(red: 0.03, green: 0.16, blue: 0.20, alpha: 1).cgColor,
         ]
         gradient.startPoint = CGPoint(x: 0, y: 0)
         gradient.endPoint = CGPoint(x: 1, y: 1)
         view.layer.insertSublayer(gradient, at: 0)
 
-        let mark = UILabel()
-        mark.text = "▱  run.cloud"
-        mark.font = .monospacedSystemFont(ofSize: 21, weight: .bold)
+        let mark = label("▱  run.cloud interaction proof", size: 19, weight: .bold)
+        mark.font = .monospacedSystemFont(ofSize: 19, weight: .bold)
         mark.textColor = UIColor(red: 0.46, green: 0.91, blue: 0.98, alpha: 1)
 
-        let eyebrow = label("NATIVE iOS APP", size: 13, weight: .semibold)
-        eyebrow.textColor = UIColor(red: 0.65, green: 0.75, blue: 0.81, alpha: 1)
+        let stateColumn = UIStackView(arrangedSubviews: [tapState, swipeState, gestureState, keyState])
+        stateColumn.axis = .vertical
+        stateColumn.spacing = 3
 
-        let title = label("Upload.\nLaunch.\nScreenshot.", size: 44, weight: .bold)
-        title.numberOfLines = 3
+        let tapButton = UIButton(type: .system)
+        tapButton.setTitle("TAP TARGET", for: .normal)
+        tapButton.titleLabel?.font = .monospacedSystemFont(ofSize: 16, weight: .bold)
+        tapButton.setTitleColor(.white, for: .normal)
+        tapButton.backgroundColor = UIColor(red: 0.10, green: 0.38, blue: 0.46, alpha: 1)
+        tapButton.layer.cornerRadius = 12
+        tapButton.layer.borderColor = UIColor(red: 0.46, green: 0.91, blue: 0.98, alpha: 0.7).cgColor
+        tapButton.layer.borderWidth = 1
+        tapButton.accessibilityIdentifier = "tap-target"
+        tapButton.addTarget(self, action: #selector(tapped), for: .touchUpInside)
+        tapButton.heightAnchor.constraint(equalToConstant: 54).isActive = true
 
-        let detail = label(
-            "This screen was compiled from Swift source, uploaded as an app archive, and launched in a run.cloud simulator.",
-            size: 17,
-            weight: .regular
-        )
-        detail.numberOfLines = 0
-        detail.textColor = UIColor(red: 0.72, green: 0.80, blue: 0.84, alpha: 1)
+        let textInput = UITextField()
+        textInput.delegate = self
+        textInput.placeholder = "Type text here"
+        textInput.accessibilityIdentifier = "text-input"
+        textInput.accessibilityLabel = "Proof text input"
+        textInput.textColor = .white
+        textInput.tintColor = UIColor(red: 0.46, green: 0.91, blue: 0.98, alpha: 1)
+        textInput.backgroundColor = UIColor.white.withAlphaComponent(0.09)
+        textInput.layer.cornerRadius = 12
+        textInput.layer.borderColor = UIColor.white.withAlphaComponent(0.25).cgColor
+        textInput.layer.borderWidth = 1
+        textInput.returnKeyType = .done
+        textInput.autocorrectionType = .no
+        textInput.autocapitalizationType = .none
+        textInput.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 14, height: 1))
+        textInput.leftViewMode = .always
+        textInput.heightAnchor.constraint(equalToConstant: 50).isActive = true
 
-        let steps = UIStackView(arrangedSubviews: [
-            step(number: "01", title: "APP UPLOADED"),
-            step(number: "02", title: "SIMULATOR STARTED"),
-            step(number: "03", title: "PNG CAPTURED"),
+        let gestureArea = GestureProofView()
+        gestureArea.accessibilityIdentifier = "gesture-area"
+        gestureArea.accessibilityLabel = "Gesture proof area"
+        gestureArea.onState = { [weak self] state in self?.gestureState.text = "Gesture: \(state)" }
+        gestureArea.heightAnchor.constraint(equalToConstant: 126).isActive = true
+
+        let scrollView = makeScrollProof()
+        scrollView.heightAnchor.constraint(equalToConstant: 190).isActive = true
+
+        let content = UIStackView(arrangedSubviews: [
+            mark,
+            stateColumn,
+            tapButton,
+            textInput,
+            gestureArea,
+            scrollView,
         ])
-        steps.axis = .vertical
-        steps.spacing = 10
-
-        let content = UIStackView(arrangedSubviews: [mark, spacer(42), eyebrow, spacer(12), title, spacer(22), detail, spacer(34), steps])
         content.axis = .vertical
+        content.spacing = 9
         content.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(content)
+
+        let page = UIScrollView()
+        page.alwaysBounceVertical = false
+        page.keyboardDismissMode = .interactive
+        page.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(page)
+        page.addSubview(content)
 
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 28),
-            content.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -28),
-            content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 26),
+            page.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            page.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            page.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            content.leadingAnchor.constraint(equalTo: page.contentLayoutGuide.leadingAnchor, constant: 24),
+            content.trailingAnchor.constraint(equalTo: page.contentLayoutGuide.trailingAnchor, constant: -24),
+            content.topAnchor.constraint(equalTo: page.contentLayoutGuide.topAnchor, constant: 14),
+            content.bottomAnchor.constraint(equalTo: page.contentLayoutGuide.bottomAnchor, constant: -12),
+            content.widthAnchor.constraint(equalTo: page.frameLayoutGuide.widthAnchor, constant: -48),
         ])
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        becomeFirstResponder()
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         gradient.frame = view.bounds
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if let key = presses.first?.key {
+            let value = key.charactersIgnoringModifiers
+            if !value.isEmpty {
+                showKey(readableKey(value, modifiers: key.modifierFlags))
+            }
+        }
+        super.pressesBegan(presses, with: event)
+    }
+
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        showKey("Enter")
+        textField.resignFirstResponder()
+        becomeFirstResponder()
+        return true
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.contentOffset.y > 24 {
+            swipeState.text = "Swipe: moved"
+        }
+    }
+
+    @objc private func tapped() {
+        tapCount += 1
+        tapState.text = "Tap count: \(tapCount)"
+    }
+
+    @objc private func keyPressed(_ sender: UIKeyCommand) {
+        let input = sender.discoverabilityTitle ?? readableKey(sender.input ?? "unknown")
+        showKey(readableKey(input, modifiers: sender.modifierFlags))
+    }
+
+    private func showKey(_ value: String) {
+        keyState.text = "Key: \(value)"
+    }
+
+    private func keyCommand(_ input: String, name: String) -> UIKeyCommand {
+        let command = UIKeyCommand(input: input, modifierFlags: [], action: #selector(keyPressed(_:)))
+        command.discoverabilityTitle = name
+        return command
+    }
+
+    private func readableKey(
+        _ input: String,
+        modifiers: UIKeyModifierFlags = []
+    ) -> String {
+        let key: String
+        switch input {
+        case UIKeyCommand.inputUpArrow: key = "ArrowUp"
+        case UIKeyCommand.inputDownArrow: key = "ArrowDown"
+        case UIKeyCommand.inputLeftArrow: key = "ArrowLeft"
+        case UIKeyCommand.inputRightArrow: key = "ArrowRight"
+        case "\r", "\n": key = "Enter"
+        case "\u{1b}": key = "Escape"
+        default: key = input
+        }
+        var names: [String] = []
+        if modifiers.contains(.control) { names.append("Control") }
+        if modifiers.contains(.alternate) { names.append("Option") }
+        if modifiers.contains(.shift) { names.append("Shift") }
+        if modifiers.contains(.command) { names.append("Command") }
+        names.append(key)
+        return names.joined(separator: "+")
+    }
+
+    private func makeScrollProof() -> UIScrollView {
+        let scroll = UIScrollView()
+        scroll.delegate = self
+        scroll.accessibilityIdentifier = "swipe-scroll"
+        scroll.accessibilityLabel = "Swipe proof scroll area"
+        scroll.backgroundColor = UIColor.white.withAlphaComponent(0.05)
+        scroll.layer.cornerRadius = 12
+        scroll.layer.borderColor = UIColor.white.withAlphaComponent(0.16).cgColor
+        scroll.layer.borderWidth = 1
+        scroll.showsVerticalScrollIndicator = true
+
+        let cards = UIStackView(arrangedSubviews: [
+            scrollCard("SWIPE AREA", detail: "Swipe up inside this panel"),
+            scrollCard("KEEP GOING", detail: "The state above changes after movement"),
+            scrollCard("SWIPE COMPLETE", detail: "This card confirms the viewport moved"),
+        ])
+        cards.axis = .vertical
+        cards.spacing = 12
+        cards.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(cards)
+        NSLayoutConstraint.activate([
+            cards.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor, constant: 12),
+            cards.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor, constant: -12),
+            cards.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor, constant: 12),
+            cards.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor, constant: -12),
+            cards.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor, constant: -24),
+        ])
+        return scroll
+    }
+
+    private func scrollCard(_ title: String, detail: String) -> UIView {
+        let titleLabel = label(title, size: 14, weight: .bold)
+        titleLabel.font = .monospacedSystemFont(ofSize: 14, weight: .bold)
+        titleLabel.textColor = UIColor(red: 0.55, green: 0.93, blue: 0.57, alpha: 1)
+        let detailLabel = label(detail, size: 13, weight: .regular)
+        detailLabel.textColor = UIColor(red: 0.72, green: 0.80, blue: 0.84, alpha: 1)
+        detailLabel.numberOfLines = 0
+        let stack = UIStackView(arrangedSubviews: [titleLabel, detailLabel])
+        stack.axis = .vertical
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        let card = UIView()
+        card.backgroundColor = UIColor.white.withAlphaComponent(0.07)
+        card.layer.cornerRadius = 10
+        card.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -14),
+            card.heightAnchor.constraint(equalToConstant: 112),
+        ])
+        return card
     }
 
     private func label(_ text: String, size: CGFloat, weight: UIFont.Weight) -> UILabel {
@@ -86,39 +266,63 @@ final class ProofViewController: UIViewController {
         return label
     }
 
-    private func spacer(_ height: CGFloat) -> UIView {
-        let spacer = UIView()
-        spacer.heightAnchor.constraint(equalToConstant: height).isActive = true
-        return spacer
+    private static func status(_ text: String, id: String) -> UILabel {
+        let label = UILabel()
+        label.text = text
+        label.font = .monospacedSystemFont(ofSize: 13, weight: .medium)
+        label.textColor = UIColor(red: 0.78, green: 0.86, blue: 0.90, alpha: 1)
+        label.accessibilityIdentifier = id
+        return label
+    }
+}
+
+final class GestureProofView: UILabel {
+    var onState: ((String) -> Void)?
+    private var origin = CGPoint.zero
+    private var maximumTouches = 0
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = true
+        isMultipleTouchEnabled = true
+        numberOfLines = 0
+        textAlignment = .center
+        text = "GESTURE AREA\nDrag, hold, or use two fingers"
+        font = .monospacedSystemFont(ofSize: 14, weight: .bold)
+        textColor = .white
+        backgroundColor = UIColor(red: 0.16, green: 0.25, blue: 0.38, alpha: 1)
+        layer.cornerRadius = 12
+        layer.borderColor = UIColor(red: 0.55, green: 0.65, blue: 1.0, alpha: 0.8).cgColor
+        layer.borderWidth = 1
+        clipsToBounds = true
     }
 
-    private func step(number: String, title: String) -> UIView {
-        let numberLabel = label(number, size: 13, weight: .bold)
-        numberLabel.font = .monospacedSystemFont(ofSize: 13, weight: .bold)
-        numberLabel.textColor = UIColor(red: 0.55, green: 0.93, blue: 0.57, alpha: 1)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
-        let titleLabel = label(title, size: 14, weight: .semibold)
-        titleLabel.font = .monospacedSystemFont(ofSize: 14, weight: .semibold)
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        origin = touches.first?.location(in: self) ?? .zero
+        maximumTouches = event?.allTouches?.count ?? touches.count
+        onState?(maximumTouches > 1 ? "multi-touch" : "started")
+    }
 
-        let row = UIStackView(arrangedSubviews: [numberLabel, titleLabel])
-        row.axis = .horizontal
-        row.alignment = .center
-        row.spacing = 18
-        row.translatesAutoresizingMaskIntoConstraints = false
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        maximumTouches = max(maximumTouches, event?.allTouches?.count ?? touches.count)
+        let point = touches.first?.location(in: self) ?? origin
+        let distance = hypot(point.x - origin.x, point.y - origin.y)
+        if maximumTouches > 1 {
+            onState?("multi-touch")
+        } else if distance > 12 {
+            onState?("dragging")
+        }
+    }
 
-        let card = UIView()
-        card.backgroundColor = UIColor.white.withAlphaComponent(0.07)
-        card.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
-        card.layer.borderWidth = 1
-        card.layer.cornerRadius = 12
-        card.addSubview(row)
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        onState?(maximumTouches > 1 ? "multi-touch complete" : "complete")
+    }
 
-        NSLayoutConstraint.activate([
-            row.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
-            row.trailingAnchor.constraint(lessThanOrEqualTo: card.trailingAnchor, constant: -16),
-            row.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
-            row.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -14),
-        ])
-        return card
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        onState?("cancelled")
     }
 }

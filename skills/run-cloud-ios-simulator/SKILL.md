@@ -1,44 +1,32 @@
 ---
 name: run-cloud-ios-simulator
-description: Operate run.cloud iOS simulator and Android emulator sessions with the CLI or TypeScript SDK. Use for creating, installing, inspecting, embedding, smoke-testing, connecting local Metro, capturing iOS screenshots, injecting iOS media, or releasing remote mobile sessions.
+description: Operate run.cloud iOS simulator and Android emulator sessions with the CLI or TypeScript SDK. Use for creating, installing, inspecting, reading logs, controlling, embedding, smoke-testing, connecting local Metro, taking screenshots, injecting iOS media, or releasing remote mobile sessions.
 ---
 
 # Operate run.cloud Mobile Sessions
 
-Use run.cloud through the `runcloud` CLI for terminal workflows and
-`@run-cloud/sdk` for application, CI, or agent code.
+Use the `runcloud` CLI for terminal workflows, `@run-cloud/sdk` for TypeScript,
+and `@runcloud/ui` for React embeds.
 
 ## Authenticate
 
 - Install the CLI with `npm install -g runcloud`.
-- Use `runcloud login` for an interactive browser handoff. Use
-  `runcloud login --manual` when a local callback cannot open.
+- Use `runcloud login`; add `--manual` when a local callback cannot open.
 - In CI, set `RUN_CLOUD_API_KEY`. `RUN_CLOUD_API_TOKEN` is an equivalent alias.
-- Set `RUN_CLOUD_API_URL` only to override the production default
-  `https://api.run.cloud`.
-- Never print, commit, or place credentials in a skill file.
-- Treat signed simulator URLs and tunnel URLs as bearer secrets.
-- Require Node.js 20 or newer for the CLI and TypeScript SDK.
+- Set `RUN_CLOUD_API_URL` only to override `https://api.run.cloud`.
+- Require Node.js 20 or newer.
+- Never print, commit, or place credentials in a skill file. Treat signed session
+  and tunnel URLs as bearer secrets.
 
-Inspect account and organization credit before starting metered work:
+Check access and credit before starting metered work:
 
 ```bash
 runcloud account --json
 ```
 
-Sessions require product access, organization credit below its ceiling, and
-available fleet capacity. A create request may queue while capacity is full.
+The SDK equivalents are `cloud.account()` and `cloud.usage({ orgId? })`.
 
-## Choose the Interface
-
-- Prefer CLI commands with `--json` for shell automation.
-- Prefer `@run-cloud/sdk` for TypeScript applications and CI.
-- Inspect `runcloud <command> --help` or installed SDK types before using a
-  method not documented here.
-
-## Use the CLI
-
-Create an iOS session, capture its ID, open a deep link, and release it:
+## Create and Release Sessions
 
 ```bash
 SESSION_ID=$(runcloud ios create \
@@ -48,62 +36,50 @@ SESSION_ID=$(runcloud ios create \
   --json | jq -r '.id')
 
 trap 'runcloud ios delete "$SESSION_ID" >/dev/null 2>&1 || true' EXIT
-
 runcloud ios get "$SESSION_ID" --json
-runcloud ios open-url myapp://settings --id "$SESSION_ID" --json
 ```
 
-Use the corresponding `runcloud android` commands for Android artifacts.
-
-The shared mobile lifecycle is:
-
-- `runcloud ios|android create`
-- `runcloud ios|android list [--all]`
-- `runcloud ios|android get <id>`
-- `runcloud ios|android open-url <url> --id <id>`
-- `runcloud ios|android delete <id>`
-
-Create accepts `--model`, `--region`, `--display-name`, repeatable `--label`,
-repeatable `--install`, repeatable `--install-asset`,
-`--inactivity-timeout`, `--hard-timeout`, `--codec`, `--rm`, and `--json`.
-
-Use assets and samples when no local artifact is ready:
-
-```bash
-runcloud sample download ios
-runcloud ios create --install ./run-cloud-sample-ios.app.tar.gz --json
-
-runcloud asset push ./build/MyApp.tar.gz --name my-app --json
-runcloud ios create --install-asset my-app --json
-runcloud asset list --json
-runcloud asset pull <asset-id> --output ./MyApp.tar.gz
-runcloud asset delete <asset-id> --json
-```
+Replace `ios` with `android` for an Android artifact. The shared lifecycle is
+`create`, `list`, `get`, `open-url`, `logs`, and `delete`. Use `--json` whenever
+another program consumes output, and inspect `runcloud ios|android --help` for
+create and log options.
 
 iOS needs an Apple Silicon simulator-compatible `.app`, `.zip`, `.tar.gz`, or
-`.ipa` artifact. A device-signed App Store IPA is not a substitute. Android
-needs an emulator-compatible artifact such as an APK.
+`.ipa`; a device-signed App Store IPA is not a substitute. Android needs an
+emulator-compatible APK.
 
-## Connect Local Development
+## Control a Session
 
-Connect a local Metro or mock server to an active iOS session:
+Both platform groups expose acknowledged controls:
 
 ```bash
-runcloud ios tunnel "$SESSION_ID" \
-  --local-port 8081 \
-  --service metro \
-  --json
-
-runcloud ios tunnel-status --json
+runcloud ios tap "$SESSION_ID" 0.5 0.3 --json
+runcloud ios swipe "$SESSION_ID" 0.5 0.8 0.5 0.2 --duration 300 --json
+runcloud ios type-text "$SESSION_ID" 'hello' --json
+runcloud ios press-key "$SESSION_ID" enter --json
+runcloud ios press-button "$SESSION_ID" home --json
+runcloud ios screenshot "$SESSION_ID" --output ios.png --json
 ```
 
-Use the run.cloud sidecar flow. Do not install or expose an unauthenticated
-third-party tunnel. If the sidecar is unavailable, report that requirement
-instead of guessing a public URL.
+The full control set is `tap`, `swipe`, `gesture`, `type-text`, `press-key`,
+`press-button`, `rotate`, `reload`, `scroll`, `toggle-software-keyboard`,
+`simulate-memory-warning`, `rotate-digital-crown`, `set-render-debug`, and
+`screenshot`. Every interaction accepts `--request-id`, `--timeout`, and
+`--json`; use `runcloud <platform> <control> --help` for its typed arguments.
+
+Coordinates use the current display orientation: `(0, 0)` is top-left and
+`(1, 1)` is bottom-right. Gesture steps use one or two points with `begin`,
+`move`, and `end` phases. Each `delayMs` is the pause before the next step, so
+the final `end` step must use `0`. Key names are semantic US-keyboard names;
+modifiers are `shift`, `control`, `alt`, and `meta`. Current mobile sessions do
+not support Digital Crown input, and Android does not support iOS render-debug
+controls or the `capsLock`, `numLock`, and `scrollLock` keys. Handle structured
+`unsupported_action` errors instead of retrying them.
+
+An acknowledgement means input dispatch completed. Confirm visible app effects
+with a screenshot or the signed viewer when the outcome matters.
 
 ## Use the TypeScript SDK
-
-Install the SDK:
 
 ```bash
 npm install @run-cloud/sdk
@@ -116,81 +92,96 @@ import { writeFile } from "node:fs/promises";
 import { Client } from "@run-cloud/sdk";
 
 const cloud = new Client();
-const session = await cloud.ios.create({
-  displayName: "Agent smoke",
-  labels: { owner: "agent" },
+const session = await cloud.android.create({
   inactivityTimeout: "60s",
   hardTimeout: "10m",
-  codec: "auto",
+  tags: { owner: "agent" },
 });
 
 try {
-  await cloud.ios.openUrl(session.id, "https://run.cloud");
-  const screenshot = await cloud.ios.screenshot(session.id);
-  await writeFile("run-cloud.png", screenshot);
+  await cloud.android.tap(session.id, { x: 0.5, y: 0.3 });
+  await cloud.android.typeText(session.id, "hello");
+  await cloud.android.pressKey(session.id, "enter");
+  const screenshot = await cloud.android.screenshot(session.id);
+  await writeFile("android.png", screenshot);
 } finally {
-  await cloud.ios.delete(session.id);
+  await cloud.android.delete(session.id);
 }
 ```
 
-The mobile SDK surface is:
+`cloud.ios`, `cloud.android`, and the platform-selectable `cloud.simulators`
+expose `interact` plus convenience methods matching every CLI control above.
+Interaction options accept `requestId`, `timeoutMs`, and `signal`; results are
+typed acknowledgements. Use `RunCloudError` fields such as `code`, `retryable`,
+`requestId`, and `action` when reporting API failures.
 
-- `cloud.account()` and `cloud.usage({ orgId? })`
-- `cloud.ios`: `create`, `list`, `get`, `openUrl`, `screenshot`,
-  `uploadVideo`, `uploadMicrophoneAudio`, `delete`
-- `cloud.android`: `create`, `list`, `get`, `openUrl`, `delete`
-- `cloud.simulators`: runtime-platform `create`, `list`, `get`, `openUrl`,
-  `delete`
-- `cloud.assets`: `upload`, `list`, `delete`
+The lifecycle surface also includes `create`, `list`, `get`, `openUrl`, `logs`,
+`followLogs`, and `delete`. Both platforms expose `screenshot`; iOS additionally
+supports `uploadVideo` and `uploadMicrophoneAudio`. Inspect the installed types
+for complete create, asset, log, and media options.
 
-Create options include `model`, `region`, `displayName`, `labels`,
-`installAssets`, `inactivityTimeout`, `hardTimeout`, and `codec`.
+In compact form, `cloud.ios`: `create`, `list`, `get`, `openUrl`, `logs`, `followLogs`, `screenshot`.
+`cloud.android` provides the same shared lifecycle and control operations.
 
-Do not invent SDK methods for scripted taps, typing, recording, app lifecycle,
-or Android screenshots. Browser-stream interaction and iframe commands are
-separate from the public SDK.
+## Diagnose App Failures
 
-## Inject iOS Media
+```bash
+runcloud ios logs "$SESSION_ID" --tail 1000
+runcloud android logs "$SESSION_ID" --tail 1000
+```
 
-Use `cloud.ios.uploadVideo(id, video, options)` for MP4 or QuickTime video. It
-stores a user-owned asset and imports it into Photos.
+Use `--follow` while reproducing an issue. Before releasing a failed session,
+capture a bounded retained snapshot; a follow stream contains only new entries.
 
-Use `cloud.ios.uploadMicrophoneAudio(id, audio, options)` for AAC, M4A, MP3,
-MP4-audio, or WAV. Pass an optional `bundleId`; otherwise it targets the
-foreground app. The operation relaunches the target app with microphone
-permission and loops the decoded audio through `AVAudioEngine`.
+## Connect Local Development
 
-Delete uploaded assets when they are no longer needed.
+Connect a local Metro or mock server through the supported sidecar flow:
+
+```bash
+runcloud ios tunnel "$SESSION_ID" --local-port 8081 --service metro --json
+runcloud ios tunnel-status --json
+```
+
+Do not expose an unauthenticated third-party tunnel. If the sidecar is
+unavailable, report that requirement instead of guessing a public URL.
 
 ## Embed a Session
 
-- Add `embed=1` to the signed session URL for the clean iframe UI.
-- Add `loadingGuard=1` when the iframe should block interaction until streaming
-  and app launch are ready.
-- Verify `event.source` is the expected iframe before processing messages.
-- Handle `ios-simulator:status`, `ios-simulator:auth-error`,
-  `ios-simulator:session-ended`, and
-  `ios-simulator:session-restart-requested`.
-- Create a new session after a restart request; never reuse an ended URL.
-- Use `ios-simulator:command` for `reload`, `home`, `rotate`, `screenshot`, and
-  `toggleAccessibility`.
+- Use `RemoteControl` from `@runcloud/ui` with the signed session URL.
+- Its ref exposes promise-based `interact` and convenience methods matching the
+  SDK controls. Handle `onInteractionResult` for inspectable acknowledgements.
+- Add `embed=1` to raw iframe URLs. Add `loadingGuard=1` when interaction should
+  wait for streaming and app readiness.
+- Raw iframe requests use `run-cloud:interaction`; acknowledgements use
+  `run-cloud:interaction-result`. Correlate them by `requestId`. To stop a
+  pending request, post `run-cloud:interaction-cancel` with the same
+  `requestId` and `action`.
+- Verify `event.source` and the exact signed-URL origin, and use that origin as
+  the `postMessage` target.
+- Legacy `ios-simulator:command` messages remain compatibility-only. Prefer the
+  generic acknowledged interaction channel for new code.
+- Create a new session after an `ios-simulator:session-restart-requested`
+  message; never reuse an ended URL.
 
-## Run Maintained Demos
+## Assets, Samples, and Demos
 
 ```bash
+runcloud sample download ios
+runcloud asset push ./build/MyApp.tar.gz --name my-app --json
+runcloud asset pull <asset-id>
+runcloud ios create --install-asset my-app --json
 runcloud demo run eight-device-mosaic --open
 runcloud demo run live-camera-relay --open
 ```
 
-The bundled demos release their sessions automatically.
+Delete uploaded assets when no longer needed. Bundled demos release their
+sessions automatically.
 
 ## Guardrails
 
-- Release every session created during a task unless the user explicitly asks
-  to keep it open.
+- Release every session created during a task unless asked to keep it open.
 - Use inactivity and hard timeouts for unattended work.
-- Verify platform compatibility before changing application code after an
+- Verify artifact/platform compatibility before changing app code after an
   install failure.
 - Do not expose credentials, signed viewer URLs, tunnel URLs, or simulator
   tokens in logs, screenshots, PR comments, or chat output.
-- Do not claim that browser iframe controls are public SDK methods.

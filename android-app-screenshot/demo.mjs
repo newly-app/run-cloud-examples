@@ -7,10 +7,10 @@ import { buildApp } from './build-app.mjs';
 export async function runDemo(args = process.argv.slice(2), dependencies = {}) {
   const result = await runScreenshotDemo({
     args,
-    platform: 'ios',
+    platform: 'android',
     defaultOutput: resolve('screenshots', 'run-cloud-proof.png'),
-    artifactFilename: 'RunCloudProof.app.tar.gz',
-    artifactContentType: 'application/gzip',
+    artifactFilename: 'RunCloudProof.apk',
+    artifactContentType: 'application/vnd.android.package-archive',
     build: dependencies.build ?? buildApp,
     createClient: dependencies.createClient ?? ((options) => new Client(options)),
     clientOptions: dependencies.clientOptions,
@@ -21,12 +21,8 @@ export async function runDemo(args = process.argv.slice(2), dependencies = {}) {
   });
 
   if (result.help) console.log(result.text);
-  else if (parseJsonFlag(args)) console.log(JSON.stringify(result));
+  else if (args.includes('--json')) console.log(JSON.stringify(result));
   return result;
-}
-
-function parseJsonFlag(args) {
-  return args.includes('--json');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

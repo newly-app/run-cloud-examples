@@ -34,7 +34,7 @@ it(
       session = await cloud.simulators.create({
         platform,
         displayName: `published-onboarding-e2e-${Date.now()}`,
-        labels: { test: 'published-onboarding' },
+        tags: { test: 'published-onboarding' },
         inactivityTimeout: '60s',
         hardTimeout: '2m',
       });

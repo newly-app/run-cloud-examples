@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runDemo, parseOptions } from './demo.mjs';
+import { parseOptions, requireSessionUrl, runDemo } from './demo.mjs';
 
 describe('sdk-ios-android example', () => {
   it('documents and uses the public SDK for both simulator platforms', () => {
@@ -23,6 +23,17 @@ describe('sdk-ios-android example', () => {
     assert.equal(parseOptions(['--platform', 'android', '--codec', 'webrtc', '--duration', '1']).platform, 'android');
     assert.equal(parseOptions(['--json', '--keep']).json, true);
     assert.throws(() => parseOptions(['--codec', 'avcc']), /--codec/);
+  });
+
+  it('requires the signed session URL returned by the SDK', () => {
+    assert.equal(
+      requireSessionUrl({ id: 'ios-session', platform: 'ios', url: 'https://ios.example.test' }),
+      'https://ios.example.test',
+    );
+    assert.throws(
+      () => requireSessionUrl({ id: 'android-session', platform: 'android', url: null }),
+      /android session android-session did not return a signed URL/,
+    );
   });
 
   it('runs the SDK lifecycle for iOS and Android with a mocked API', async () => {
@@ -48,11 +59,15 @@ describe('sdk-ios-android example', () => {
       throw new Error(`unexpected request: ${init.method} ${url}`);
     };
 
-    await withProcessEnv({ RUN_CLOUD_API_KEY: 'rc_live_test' }, async () => {
-      await withConsoleSilenced(async () => {
+    const output = await withProcessEnv({ RUN_CLOUD_API_KEY: 'rc_live_test' }, async () => {
+      return await withConsoleSilenced(async () => {
         await runDemo(['--platform', 'both', '--duration', '1', '--codec', 'webrtc', '--json'], { fetch });
       });
     });
+
+    assert.doesNotMatch(output.stdout, /example\.test/);
+    const payload = JSON.parse(output.stdout);
+    assert.ok(payload.sessions.every((entry) => !Object.hasOwn(entry, 'url')));
 
     assert.deepEqual(requests.map((request) => [request.method, new URL(request.url).pathname]), [
       ['GET', '/run-cloud/account'],
@@ -65,7 +80,7 @@ describe('sdk-ios-android example', () => {
     ]);
     assert.deepEqual(requests[1].body, {
       displayName: 'sdk-ios-demo',
-      labels: { demo: 'sdk-ios-android' },
+      tags: { demo: 'sdk-ios-android' },
       inactivityTimeout: '60s',
       hardTimeout: '10m',
       codec: 'webrtc',
@@ -79,9 +94,8 @@ function session(platform, body) {
     id: `${platform}-session`,
     platform,
     status: 'active',
-    labels: options.labels,
+    tags: options.tags,
     url: `https://${platform}.example.test`,
-    baseUrl: `https://${platform}.example.test`,
     codec: options.codec,
     stream: { codec: options.codec, viewerCodec: options.codec, hostCodec: options.codec },
     checkedHosts: [],
@@ -100,7 +114,7 @@ async function withProcessEnv(values, callback) {
     process.env[key] = value;
   }
   try {
-    await callback();
+    return await callback();
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -112,10 +126,11 @@ async function withProcessEnv(values, callback) {
 async function withConsoleSilenced(callback) {
   const originalLog = console.log;
   const originalError = console.error;
-  console.log = () => undefined;
+  const stdout = [];
+  console.log = (...values) => stdout.push(values.join(' '));
   console.error = () => undefined;
   try {
-    await callback();
+    return { result: await callback(), stdout: stdout.join('\n') };
   } finally {
     console.log = originalLog;
     console.error = originalError;
