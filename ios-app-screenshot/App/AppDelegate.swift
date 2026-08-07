@@ -106,13 +106,24 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         content.axis = .vertical
         content.spacing = 9
         content.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(content)
+
+        let page = UIScrollView()
+        page.alwaysBounceVertical = false
+        page.keyboardDismissMode = .interactive
+        page.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(page)
+        page.addSubview(content)
 
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
-            content.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
-            content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 14),
-            content.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+            page.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            page.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            page.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            content.leadingAnchor.constraint(equalTo: page.contentLayoutGuide.leadingAnchor, constant: 24),
+            content.trailingAnchor.constraint(equalTo: page.contentLayoutGuide.trailingAnchor, constant: -24),
+            content.topAnchor.constraint(equalTo: page.contentLayoutGuide.topAnchor, constant: 14),
+            content.bottomAnchor.constraint(equalTo: page.contentLayoutGuide.bottomAnchor, constant: -12),
+            content.widthAnchor.constraint(equalTo: page.frameLayoutGuide.widthAnchor, constant: -48),
         ])
     }
 

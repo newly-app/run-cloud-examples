@@ -33,12 +33,18 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(source, /dispatchKeyEvent/);
   assert.match(source, /TAP_TARGET_NORMALIZED_Y = 0\.23f/);
   assert.match(source, /page\.addView\(content/);
+  assert.match(source, /target\.getLocationOnScreen/);
   assert.match(source, /KeyEvent\.isModifierKey/);
+  assert.match(source, /showKey\("Enter"\)/);
+  assert.match(source, /event\.isAltPressed\(\), "Option"/);
+  assert.match(source, /event\.isMetaPressed\(\), "Command"/);
+  assert.match(source, /setClickable\(true\)/);
   assert.match(source, /performClick\(\)/);
   assert.match(readme, /npm run demo -- --json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);
   assert.match(readme, /tap `0\.50,0\.23`/);
+  assert.match(readme, /After a\s+rotation/);
 });
 
 it('requires an explicit Android SDK root', () => {

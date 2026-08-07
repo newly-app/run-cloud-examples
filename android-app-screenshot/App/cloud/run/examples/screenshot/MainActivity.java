@@ -91,7 +91,7 @@ public final class MainActivity extends Activity {
             boolean enter = actionId == EditorInfo.IME_ACTION_DONE
                 || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER);
             if (!enter) return false;
-            showKey("ENTER");
+            showKey("Enter");
             view.clearFocus();
             content.requestFocus();
             InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -158,7 +158,7 @@ public final class MainActivity extends Activity {
         appendModifier(value, event.isCtrlPressed(), "Control");
         appendModifier(value, event.isAltPressed(), "Option");
         appendModifier(value, event.isShiftPressed(), "Shift");
-        appendModifier(value, event.isMetaPressed(), "Meta");
+        appendModifier(value, event.isMetaPressed(), "Command");
         value.append(key);
         return value.toString();
     }
@@ -232,18 +232,20 @@ public final class MainActivity extends Activity {
     }
 
     private void alignTapTarget(View spacer, View target) {
-        int rootHeight = contentRootHeight(target);
-        int targetCenterWithoutSpacer = target.getTop() - spacer.getHeight() + target.getHeight() / 2;
+        View viewport = target.getRootView();
+        int[] viewportLocation = new int[2];
+        int[] targetLocation = new int[2];
+        viewport.getLocationOnScreen(viewportLocation);
+        target.getLocationOnScreen(targetLocation);
+        int targetCenterWithoutSpacer = targetLocation[1]
+            - viewportLocation[1]
+            - spacer.getHeight()
+            + target.getHeight() / 2;
         int spacerHeight = Math.max(
             0,
-            Math.round(rootHeight * TAP_TARGET_NORMALIZED_Y) - targetCenterWithoutSpacer
+            Math.round(viewport.getHeight() * TAP_TARGET_NORMALIZED_Y) - targetCenterWithoutSpacer
         );
         spacer.setLayoutParams(new LinearLayout.LayoutParams(1, spacerHeight));
-    }
-
-    private int contentRootHeight(View target) {
-        View root = target.getRootView();
-        return root.getHeight() > 0 ? root.getHeight() : getResources().getDisplayMetrics().heightPixels;
     }
 
     private interface GestureListener {
@@ -264,6 +266,8 @@ public final class MainActivity extends Activity {
             setTextColor(Color.WHITE);
             setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             setGravity(Gravity.CENTER);
+            setClickable(true);
+            setFocusable(true);
             GradientDrawable background = new GradientDrawable();
             background.setColor(Color.rgb(41, 64, 97));
             background.setStroke(dp(context, 1), Color.rgb(140, 166, 255));
@@ -291,7 +295,6 @@ public final class MainActivity extends Activity {
                     else if (distance > dp(getContext(), 12)) listener.onState("dragging");
                     break;
                 case MotionEvent.ACTION_UP:
-                    listener.onState(maximumPointers > 1 ? "multi-touch complete" : "complete");
                     performClick();
                     break;
                 case MotionEvent.ACTION_CANCEL:
@@ -305,7 +308,9 @@ public final class MainActivity extends Activity {
 
         @Override
         public boolean performClick() {
-            return super.performClick();
+            super.performClick();
+            listener.onState(maximumPointers > 1 ? "multi-touch complete" : "complete");
+            return true;
         }
 
         private static int dp(Context context, int value) {

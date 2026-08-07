@@ -79,8 +79,11 @@ session. It handles the screenshot response as raw PNG bytes.
 ## Interaction-proof layout
 
 The included app is also the deterministic fixture used by the simulator input
-parity suite. Coordinates below are normalized to the full portrait screen;
-`0,0` is top-left and `1,1` is bottom-right.
+parity suite. Reference coordinates below are normalized to the initial full
+portrait screen; `0,0` is top-left and `1,1` is bottom-right. The page scrolls
+when a shorter or landscape viewport cannot show every target at once. After a
+rotation, prefer the accessibility descriptions or transform the coordinates
+for the current orientation.
 
 | Region | Accessibility description | Reference input |
 | --- | --- | --- |
@@ -90,7 +93,8 @@ parity suite. Coordinates below are normalized to the full portrait screen;
 | Scroll panel | `swipe-scroll` | swipe from `0.50,0.65` to `0.50,0.54` |
 
 Visible state has descriptions `tap-state`, `swipe-state`, `gesture-state`, and
-`key-state`. Every Android key-down event updates the last-key state, including
-Control, Alt, Shift, and Meta modifiers; Enter also dismisses the text keyboard.
+`key-state`. Every non-modifier Android key-down event updates the last-key state,
+including Control, Option, Shift, and Command modifiers; Enter also dismisses
+the text keyboard.
 Prefer accessibility descriptions when the driver exposes them; the coordinates
 are stable anchors for normalized input APIs.

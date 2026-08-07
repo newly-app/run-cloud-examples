@@ -86,6 +86,7 @@ export function verifyScreenshotExample({
         assert.equal(fake.createOptions.inactivityTimeout, '60s');
         assert.equal(fake.createOptions.hardTimeout, '10m');
         assert.equal(fake.screenshotSessionId, `${platform}-session`);
+        assert.deepEqual(fake.getSessionIds, [`${platform}-session`]);
         assert.equal(fake.deletedSessionId, `${platform}-session`);
         assert.equal(fake.deletedAssetId, `${platform}-asset`);
         assert.deepEqual(events, [
@@ -399,8 +400,10 @@ function fakeCloud(platform, events, options = {}) {
       result.createOptions = createOptions;
       return session(options.initialStatus ?? 'active', options.initialStatus !== 'provisioning');
     },
-    async get() {
+    async get(sessionId) {
       events.push('session:get');
+      result.getSessionIds ??= [];
+      result.getSessionIds.push(sessionId);
       const status = options.getStatus ?? 'active';
       return session(status, status === 'active');
     },

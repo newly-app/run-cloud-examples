@@ -14,6 +14,7 @@ verifyScreenshotExample({
 it('builds an Apple Silicon simulator app with the normal Xcode toolchain', async () => {
   const build = await readFile(new URL('./build-app.mjs', import.meta.url), 'utf8');
   const source = await readFile(new URL('./App/AppDelegate.swift', import.meta.url), 'utf8');
+  const plist = await readFile(new URL('./App/Info.plist', import.meta.url), 'utf8');
   const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
   assert.match(build, /xcrun.*iphonesimulator/s);
   assert.match(build, /arm64-apple-ios16\.0-simulator/);
@@ -29,8 +30,13 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /id: "gesture-state"/);
   assert.match(source, /id: "key-state"/);
   assert.match(source, /override var keyCommands/);
+  assert.match(source, /let page = UIScrollView\(\)/);
+  assert.match(source, /page\.contentLayoutGuide/);
+  assert.match(plist, /UIInterfaceOrientationLandscapeLeft/);
+  assert.match(plist, /UIInterfaceOrientationLandscapeRight/);
   assert.match(readme, /npm run demo -- --json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);
   assert.match(readme, /tap `0\.50,0\.23`/);
+  assert.match(readme, /After a\s+rotation/);
 });

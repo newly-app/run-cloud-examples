@@ -75,8 +75,11 @@ screenshot response as raw PNG bytes.
 ## Interaction-proof layout
 
 The included app is also the deterministic fixture used by the simulator input
-parity suite. Coordinates below are normalized to the full portrait screen;
-`0,0` is top-left and `1,1` is bottom-right.
+parity suite. Reference coordinates below are normalized to the initial full
+portrait screen; `0,0` is top-left and `1,1` is bottom-right. The page scrolls
+when a shorter or landscape viewport cannot show every target at once. After a
+rotation, prefer the accessibility identifiers or transform the coordinates
+for the current orientation.
 
 | Region | Accessibility identifier | Reference input |
 | --- | --- | --- |
