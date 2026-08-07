@@ -121,7 +121,10 @@ jobs:
 
   live:
     name: Live ${{ matrix.platform }} screenshot
-    if: github.event_name == 'workflow_dispatch' && inputs.live == true
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.live == true
     needs: [test, native-app-build]
     timeout-minutes: 10
     environment: live
@@ -161,11 +164,25 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ runner.temp }}/native-app
 
+      - name: Validate live run.cloud configuration
+        env:
+          RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
+          RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
+        run: |
+          if [ -z "$RUN_CLOUD_API_KEY" ]; then
+            echo "::error::The live environment is missing RUN_CLOUD_API_KEY."
+            exit 1
+          fi
+          if [ -z "$RUN_CLOUD_API_URL" ]; then
+            echo "::error::The live environment is missing RUN_CLOUD_API_URL."
+            exit 1
+          fi
+
       - name: Upload and capture the CI-built native app
         working-directory: ${{ matrix.directory }}
         env:
           RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
-          RUN_CLOUD_API_URL: ${{ vars.RUN_CLOUD_API_URL }}
+          RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
         run: >-
           npm run demo --
           --app "$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
