@@ -59,11 +59,15 @@ describe('sdk-ios-android example', () => {
       throw new Error(`unexpected request: ${init.method} ${url}`);
     };
 
-    await withProcessEnv({ RUN_CLOUD_API_KEY: 'rc_live_test' }, async () => {
-      await withConsoleSilenced(async () => {
+    const output = await withProcessEnv({ RUN_CLOUD_API_KEY: 'rc_live_test' }, async () => {
+      return await withConsoleSilenced(async () => {
         await runDemo(['--platform', 'both', '--duration', '1', '--codec', 'webrtc', '--json'], { fetch });
       });
     });
+
+    assert.doesNotMatch(output.stdout, /example\.test/);
+    const payload = JSON.parse(output.stdout);
+    assert.ok(payload.sessions.every((entry) => !Object.hasOwn(entry, 'url')));
 
     assert.deepEqual(requests.map((request) => [request.method, new URL(request.url).pathname]), [
       ['GET', '/run-cloud/account'],
@@ -110,7 +114,7 @@ async function withProcessEnv(values, callback) {
     process.env[key] = value;
   }
   try {
-    await callback();
+    return await callback();
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -122,10 +126,11 @@ async function withProcessEnv(values, callback) {
 async function withConsoleSilenced(callback) {
   const originalLog = console.log;
   const originalError = console.error;
-  console.log = () => undefined;
+  const stdout = [];
+  console.log = (...values) => stdout.push(values.join(' '));
   console.error = () => undefined;
   try {
-    await callback();
+    return { result: await callback(), stdout: stdout.join('\n') };
   } finally {
     console.log = originalLog;
     console.error = originalError;

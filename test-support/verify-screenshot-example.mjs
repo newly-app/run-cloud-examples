@@ -85,6 +85,9 @@ export function verifyScreenshotExample({
         assert.deepEqual(fake.createOptions.installAssets, [`${platform}-asset`]);
         assert.equal(fake.createOptions.inactivityTimeout, '60s');
         assert.equal(fake.createOptions.hardTimeout, '10m');
+        assert.equal(fake.screenshotSessionId, `${platform}-session`);
+        assert.equal(fake.deletedSessionId, `${platform}-session`);
+        assert.equal(fake.deletedAssetId, `${platform}-asset`);
         assert.deepEqual(events, [
           'asset:upload',
           'session:create',
@@ -401,12 +404,14 @@ function fakeCloud(platform, events, options = {}) {
       const status = options.getStatus ?? 'active';
       return session(status, status === 'active');
     },
-    async screenshot() {
+    async screenshot(sessionId) {
       events.push('session:screenshot');
+      result.screenshotSessionId = sessionId;
       return png;
     },
-    async delete() {
+    async delete(sessionId) {
       events.push('session:delete');
+      result.deletedSessionId = sessionId;
       if (options.deleteSessionError) throw options.deleteSessionError;
       return session('released');
     },
@@ -420,8 +425,9 @@ function fakeCloud(platform, events, options = {}) {
         result.uploadOptions = uploadOptions;
         return { id: `${platform}-asset` };
       },
-      async delete() {
+      async delete(assetId) {
         events.push('asset:delete');
+        result.deletedAssetId = assetId;
         if (options.deleteAssetError) throw options.deleteAssetError;
         return { deleted: true };
       },

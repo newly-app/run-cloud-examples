@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
     private static final int CYAN = Color.rgb(117, 232, 250);
     private static final int GREEN = Color.rgb(140, 237, 145);
     private static final int MUTED = Color.rgb(195, 218, 226);
+    private static final float TAP_TARGET_NORMALIZED_Y = 0.23f;
     private TextView tapState;
     private TextView swipeState;
     private TextView gestureState;
@@ -42,7 +43,8 @@ public final class MainActivity extends Activity {
             GradientDrawable.Orientation.TL_BR,
             new int[] { Color.rgb(5, 13, 20), Color.rgb(8, 42, 51) }
         ));
-        content.addView(space(proofTopSpacer()));
+        View proofTopSpacer = space(0);
+        content.addView(proofTopSpacer);
 
         TextView mark = text("▱  run.cloud interaction proof", 19, Typeface.BOLD, CYAN);
         mark.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -93,7 +95,7 @@ public final class MainActivity extends Activity {
             view.clearFocus();
             content.requestFocus();
             InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            keyboard.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(view.getWindowToken(), 0);
             return true;
         });
         content.addView(input, fixedHeight(50));
@@ -127,14 +129,21 @@ public final class MainActivity extends Activity {
         });
         content.addView(scroll, fixedHeight(190));
 
-        setContentView(content);
+        ScrollView page = new ScrollView(this);
+        page.setFillViewport(true);
+        page.addView(content, new ScrollView.LayoutParams(
+            ScrollView.LayoutParams.MATCH_PARENT,
+            ScrollView.LayoutParams.WRAP_CONTENT
+        ));
+        setContentView(page);
+        content.post(() -> alignTapTarget(proofTopSpacer, tapButton));
         content.requestFocus();
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            String value = KeyEvent.keyCodeToString(event.getKeyCode()).replace("KEYCODE_", "");
+        if (event.getAction() == KeyEvent.ACTION_DOWN && !KeyEvent.isModifierKey(event.getKeyCode())) {
+            String value = readableKey(event.getKeyCode());
             showKey(keyWithModifiers(event, value));
         }
         return super.dispatchKeyEvent(event);
@@ -147,7 +156,7 @@ public final class MainActivity extends Activity {
     private String keyWithModifiers(KeyEvent event, String key) {
         StringBuilder value = new StringBuilder();
         appendModifier(value, event.isCtrlPressed(), "Control");
-        appendModifier(value, event.isAltPressed(), "Alt");
+        appendModifier(value, event.isAltPressed(), "Option");
         appendModifier(value, event.isShiftPressed(), "Shift");
         appendModifier(value, event.isMetaPressed(), "Meta");
         value.append(key);
@@ -210,10 +219,31 @@ public final class MainActivity extends Activity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private int proofTopSpacer() {
-        float density = getResources().getDisplayMetrics().density;
-        float screenHeightDp = getResources().getDisplayMetrics().heightPixels / density;
-        return Math.max(0, Math.round(screenHeightDp * 0.23f) - 145);
+    private String readableKey(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_UP: return "ArrowUp";
+            case KeyEvent.KEYCODE_DPAD_DOWN: return "ArrowDown";
+            case KeyEvent.KEYCODE_DPAD_LEFT: return "ArrowLeft";
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return "ArrowRight";
+            case KeyEvent.KEYCODE_ENTER: return "Enter";
+            case KeyEvent.KEYCODE_ESCAPE: return "Escape";
+            default: return KeyEvent.keyCodeToString(keyCode).replace("KEYCODE_", "");
+        }
+    }
+
+    private void alignTapTarget(View spacer, View target) {
+        int rootHeight = contentRootHeight(target);
+        int targetCenterWithoutSpacer = target.getTop() - spacer.getHeight() + target.getHeight() / 2;
+        int spacerHeight = Math.max(
+            0,
+            Math.round(rootHeight * TAP_TARGET_NORMALIZED_Y) - targetCenterWithoutSpacer
+        );
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(1, spacerHeight));
+    }
+
+    private int contentRootHeight(View target) {
+        View root = target.getRootView();
+        return root.getHeight() > 0 ? root.getHeight() : getResources().getDisplayMetrics().heightPixels;
     }
 
     private interface GestureListener {
@@ -262,6 +292,7 @@ public final class MainActivity extends Activity {
                     break;
                 case MotionEvent.ACTION_UP:
                     listener.onState(maximumPointers > 1 ? "multi-touch complete" : "complete");
+                    performClick();
                     break;
                 case MotionEvent.ACTION_CANCEL:
                     listener.onState("cancelled");
@@ -270,6 +301,11 @@ public final class MainActivity extends Activity {
                     break;
             }
             return true;
+        }
+
+        @Override
+        public boolean performClick() {
+            return super.performClick();
         }
 
         private static int dp(Context context, int value) {

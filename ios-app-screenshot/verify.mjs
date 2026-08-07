@@ -24,6 +24,10 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /accessibilityIdentifier = "text-input"/);
   assert.match(source, /accessibilityIdentifier = "gesture-area"/);
   assert.match(source, /accessibilityIdentifier = "swipe-scroll"/);
+  assert.match(source, /id: "tap-state"/);
+  assert.match(source, /id: "swipe-state"/);
+  assert.match(source, /id: "gesture-state"/);
+  assert.match(source, /id: "key-state"/);
   assert.match(source, /override var keyCommands/);
   assert.match(readme, /npm run demo -- --json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);

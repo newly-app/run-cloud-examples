@@ -118,7 +118,6 @@ function summarizeSession(session) {
     id: session.id,
     platform: session.platform,
     status: session.status,
-    url: session.url,
     codec: session.codec,
     stream: session.stream,
     expiresAt: session.expiresAt,
@@ -177,7 +176,7 @@ export async function runDemo(args = process.argv.slice(2), clientOptions = {}) 
 
       const targetUrl = platform === 'ios' ? options.iosUrl : options.androidUrl;
       await cloud.simulators.openUrl(session.id, targetUrl, { platform });
-      if (!options.json) console.log(`${platform}: ${sessionUrl} (${session.codec})`);
+      if (!options.json) console.log(`${platform}: ${session.id} (${session.codec})`);
       if (options.open) openBrowser(sessionUrl);
     }
 

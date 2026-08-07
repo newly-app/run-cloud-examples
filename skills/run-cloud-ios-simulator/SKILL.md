@@ -13,7 +13,7 @@ and `@runcloud/ui` for React embeds.
 - Install the CLI with `npm install -g runcloud`.
 - Use `runcloud login`; add `--manual` when a local callback cannot open.
 - In CI, set `RUN_CLOUD_API_KEY`. `RUN_CLOUD_API_TOKEN` is an equivalent alias.
-- Set `RUN_CLOUD_API_URL` only when overriding `https://api.run.cloud`.
+- Set `RUN_CLOUD_API_URL` only to override `https://api.run.cloud`.
 - Require Node.js 20 or newer.
 - Never print, commit, or place credentials in a skill file. Treat signed session
   and tunnel URLs as bearer secrets.
@@ -23,6 +23,8 @@ Check access and credit before starting metered work:
 ```bash
 runcloud account --json
 ```
+
+The SDK equivalents are `cloud.account()` and `cloud.usage({ orgId? })`.
 
 ## Create and Release Sessions
 
@@ -67,10 +69,12 @@ The full control set is `tap`, `swipe`, `gesture`, `type-text`, `press-key`,
 
 Coordinates use the current display orientation: `(0, 0)` is top-left and
 `(1, 1)` is bottom-right. Gesture steps use one or two points with `begin`,
-`move`, and `end` phases. Key names are semantic US-keyboard names; modifiers
-are `shift`, `control`, `alt`, and `meta`. Android does not support Digital
-Crown or iOS render-debug controls. Handle structured `unsupported_action`
-errors instead of retrying them.
+`move`, and `end` phases. Each `delayMs` is the pause before the next step, so
+the final `end` step must use `0`. Key names are semantic US-keyboard names;
+modifiers are `shift`, `control`, `alt`, and `meta`. Current mobile sessions do
+not support Digital Crown input, and Android does not support iOS render-debug
+controls or the `capsLock`, `numLock`, and `scrollLock` keys. Handle structured
+`unsupported_action` errors instead of retrying them.
 
 An acknowledgement means input dispatch completed. Confirm visible app effects
 with a screenshot or the signed viewer when the outcome matters.
@@ -91,6 +95,7 @@ const cloud = new Client();
 const session = await cloud.android.create({
   inactivityTimeout: "60s",
   hardTimeout: "10m",
+  tags: { owner: "agent" },
 });
 
 try {
@@ -114,6 +119,9 @@ The lifecycle surface also includes `create`, `list`, `get`, `openUrl`, `logs`,
 `followLogs`, and `delete`. Both platforms expose `screenshot`; iOS additionally
 supports `uploadVideo` and `uploadMicrophoneAudio`. Inspect the installed types
 for complete create, asset, log, and media options.
+
+In compact form, `cloud.ios`: `create`, `list`, `get`, `openUrl`, `logs`, `followLogs`, `screenshot`.
+`cloud.android` provides the same shared lifecycle and control operations.
 
 ## Diagnose App Failures
 
@@ -145,20 +153,25 @@ unavailable, report that requirement instead of guessing a public URL.
 - Add `embed=1` to raw iframe URLs. Add `loadingGuard=1` when interaction should
   wait for streaming and app readiness.
 - Raw iframe requests use `run-cloud:interaction`; acknowledgements use
-  `run-cloud:interaction-result`. Correlate them by `requestId`.
+  `run-cloud:interaction-result`. Correlate them by `requestId`. To stop a
+  pending request, post `run-cloud:interaction-cancel` with the same
+  `requestId` and `action`.
 - Verify `event.source` and the exact signed-URL origin, and use that origin as
   the `postMessage` target.
 - Legacy `ios-simulator:command` messages remain compatibility-only. Prefer the
   generic acknowledged interaction channel for new code.
-- Create a new session after a restart request; never reuse an ended URL.
+- Create a new session after an `ios-simulator:session-restart-requested`
+  message; never reuse an ended URL.
 
 ## Assets, Samples, and Demos
 
 ```bash
 runcloud sample download ios
 runcloud asset push ./build/MyApp.tar.gz --name my-app --json
+runcloud asset pull <asset-id>
 runcloud ios create --install-asset my-app --json
 runcloud demo run eight-device-mosaic --open
+runcloud demo run live-camera-relay --open
 ```
 
 Delete uploaded assets when no longer needed. Bundled demos release their

@@ -31,6 +31,10 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(source, /setContentDescription\("gesture-area"\)/);
   assert.match(source, /setContentDescription\("swipe-scroll"\)/);
   assert.match(source, /dispatchKeyEvent/);
+  assert.match(source, /TAP_TARGET_NORMALIZED_Y = 0\.23f/);
+  assert.match(source, /page\.addView\(content/);
+  assert.match(source, /KeyEvent\.isModifierKey/);
+  assert.match(source, /performClick\(\)/);
   assert.match(readme, /npm run demo -- --json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);

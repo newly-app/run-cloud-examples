@@ -11,7 +11,7 @@ the APK, launches it in a run.cloud Android Emulator, and saves a validated PNG.
 - Node.js 20 or newer
 - a run.cloud API key with Android Emulator access and available credit
 
-GitHub's Ubuntu hosted runners already include the JDK and Android SDK tools
+GitHub-hosted Ubuntu runners already include the JDK and Android SDK tools
 used by `build-app.mjs`: `javac`, `d8`, `aapt2`, `zipalign`, and `apksigner`.
 
 ## Run it
