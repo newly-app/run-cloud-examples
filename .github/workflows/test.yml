@@ -165,6 +165,7 @@ jobs:
         working-directory: ${{ matrix.directory }}
         env:
           RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
+          RUN_CLOUD_API_URL: ${{ vars.RUN_CLOUD_API_URL }}
         run: >-
           npm run demo --
           --app "$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
