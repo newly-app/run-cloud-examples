@@ -87,6 +87,7 @@ function scriptData(value) {
 function embedUrl(value) {
   const url = new URL(value);
   url.searchParams.set('embed', '1');
+  url.searchParams.set('loadingGuard', '1');
   return url.toString();
 }
 
@@ -105,12 +106,11 @@ function absoluteHttpUrl(value, name) {
 
 export function cameraConfig(session) {
   const signedUrl = absoluteHttpUrl(session.url, 'The signed simulator URL');
-  const baseUrl = absoluteHttpUrl(session.baseUrl || signedUrl.origin, 'The simulator base URL');
   const token = signedUrl.searchParams.get('token');
   const device = session.device || signedUrl.searchParams.get('device');
   if (!token) throw new Error('The broadcaster session URL does not contain a camera token.');
   if (!device) throw new Error('The broadcaster session does not identify its simulator device.');
-  return { baseUrl: baseUrl.toString().replace(/\/$/, ''), token, device };
+  return { origin: signedUrl.origin, token, device };
 }
 
 export function appRoleUrl(appUrl, roomId, role, receiver) {
@@ -193,6 +193,7 @@ export function cameraViewerHtml(sessions, duration, roomId, now = Date.now()) {
       const deadline = ${deadline};
       const devices = [...document.querySelectorAll('.device')];
       const frames = [...document.querySelectorAll('iframe')];
+      const frameOrigins = frames.map((frame) => new URL(frame.src).origin);
       const ready = new Set();
       const count = document.querySelector('#ready-count');
       const timer = document.querySelector('#timer');
@@ -204,7 +205,7 @@ export function cameraViewerHtml(sessions, duration, roomId, now = Date.now()) {
       let stopped = false;
 
       const integrationUrl = (path) => {
-        const url = new URL('/api/integration/camera/' + path, camera.baseUrl);
+        const url = new URL('/api/integration/camera/' + path, camera.origin);
         url.searchParams.set('device', camera.device);
         return url;
       };
@@ -287,7 +288,12 @@ export function cameraViewerHtml(sessions, duration, roomId, now = Date.now()) {
       setInterval(tick, 250);
       window.addEventListener('message', (event) => {
         const index = frames.findIndex((frame) => frame.contentWindow === event.source);
-        if (index < 0 || !event.data || typeof event.data !== 'object') return;
+        if (
+          index < 0 ||
+          event.origin !== frameOrigins[index] ||
+          !event.data ||
+          typeof event.data !== 'object'
+        ) return;
         if (event.data.type === 'ios-simulator:status' && event.data.streaming === true) {
           ready.add(index);
           devices[index].dataset.ready = 'true';
