@@ -163,7 +163,7 @@ export async function runDemo(args = process.argv.slice(2)) {
 
   console.log('\nLive sessions:');
   sessions.forEach((session, index) => {
-    console.log(`  ${index + 1}. ${session.url || session.baseUrl || session.id}`);
+    console.log(`  ${index + 1}. ${session.url || session.id}`);
     if (options.open && session.url) openBrowser(session.url);
   });
 

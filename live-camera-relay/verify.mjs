@@ -17,7 +17,6 @@ function sessions() {
   return Array.from({ length: 3 }, (_, index) => ({
     id: `camera-${index + 1}`,
     url: `https://sim.example/session?token=secret-${index + 1}&device=device-${index + 1}`,
-    baseUrl: 'https://sim.example',
     device: `device-${index + 1}`,
   }));
 }
@@ -45,7 +44,7 @@ test('builds role URLs with one private room', () => {
 
 test('extracts scoped camera credentials without accepting incomplete sessions', () => {
   assert.deepEqual(cameraConfig(sessions()[0]), {
-    baseUrl: 'https://sim.example',
+    origin: 'https://sim.example',
     token: 'secret-1',
     device: 'device-1',
   });
@@ -59,6 +58,11 @@ test('renders three signed embeds while keeping credentials out of the local URL
   const demoSessions = sessions();
   const html = cameraViewerHtml(demoSessions, 60, 'room-12345678', 1_000);
   assert.equal((html.match(/<iframe /g) || []).length, 3);
+  assert.match(html, /embed=1/);
+  assert.match(html, /loadingGuard=1/);
+  assert.match(html, /frameOrigins = frames\.map\(\(frame\) => new URL\(frame\.src\)\.origin\)/);
+  assert.match(html, /frame\.contentWindow === event\.source/);
+  assert.match(html, /event\.origin !== frameOrigins\[index\]/);
   assert.match(html, /Connect webcam/);
   assert.match(html, /com\.apple\.mobilesafari/);
   assert.match(html, /audio: false/);
@@ -93,7 +97,6 @@ if (args[0] === 'ios' && args[1] === 'create') {
   process.stdout.write(JSON.stringify({
     id: name,
     url: 'https://sim.example/session?token=secret&device=' + name,
-    baseUrl: 'https://sim.example',
     device: name,
   }));
 } else {

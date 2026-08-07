@@ -8,7 +8,7 @@ server-side timeout is also set in case the local process is interrupted.
 ## Requirements
 
 - Node.js 20 or newer
-- `runcloud` 0.1.2 or newer: `npm install -g runcloud`
+- The current `runcloud` CLI: `npm install -g runcloud`
 - An existing simulator account authenticated with `runcloud login`
 - run.cloud simulator access and enough balance for two or three sessions
 

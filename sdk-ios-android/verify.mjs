@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runDemo, parseOptions } from './demo.mjs';
+import { parseOptions, requireSessionUrl, runDemo } from './demo.mjs';
 
 describe('sdk-ios-android example', () => {
   it('documents and uses the public SDK for both simulator platforms', () => {
@@ -23,6 +23,17 @@ describe('sdk-ios-android example', () => {
     assert.equal(parseOptions(['--platform', 'android', '--codec', 'webrtc', '--duration', '1']).platform, 'android');
     assert.equal(parseOptions(['--json', '--keep']).json, true);
     assert.throws(() => parseOptions(['--codec', 'avcc']), /--codec/);
+  });
+
+  it('requires the signed session URL returned by the SDK', () => {
+    assert.equal(
+      requireSessionUrl({ id: 'ios-session', platform: 'ios', url: 'https://ios.example.test' }),
+      'https://ios.example.test',
+    );
+    assert.throws(
+      () => requireSessionUrl({ id: 'android-session', platform: 'android', url: null }),
+      /android session android-session did not return a signed URL/,
+    );
   });
 
   it('runs the SDK lifecycle for iOS and Android with a mocked API', async () => {
@@ -65,7 +76,7 @@ describe('sdk-ios-android example', () => {
     ]);
     assert.deepEqual(requests[1].body, {
       displayName: 'sdk-ios-demo',
-      labels: { demo: 'sdk-ios-android' },
+      tags: { demo: 'sdk-ios-android' },
       inactivityTimeout: '60s',
       hardTimeout: '10m',
       codec: 'webrtc',
@@ -79,9 +90,8 @@ function session(platform, body) {
     id: `${platform}-session`,
     platform,
     status: 'active',
-    labels: options.labels,
+    tags: options.tags,
     url: `https://${platform}.example.test`,
-    baseUrl: `https://${platform}.example.test`,
     codec: options.codec,
     stream: { codec: options.codec, viewerCodec: options.codec, hostCodec: options.codec },
     checkedHosts: [],

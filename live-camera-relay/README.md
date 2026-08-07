@@ -8,7 +8,7 @@ and sends the real WebRTC video stream to both receiver simulators.
 ## Requirements
 
 - Node.js 20 or newer
-- `runcloud` 0.1.3 or newer: `npm install -g runcloud@0.1.3`
+- The current `runcloud` CLI: `npm install -g runcloud`
 - An existing simulator account authenticated with `runcloud login`
 - run.cloud simulator access, capacity, and enough balance for three sessions
 - A browser with webcam permission
