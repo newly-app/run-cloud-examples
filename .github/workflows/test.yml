@@ -7,18 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: Create one metered simulator session
+        description: Build and execute both metered screenshot examples
         required: true
         default: false
         type: boolean
-      platform:
-        description: Platform for the live smoke test
-        required: true
-        default: ios
-        type: choice
-        options:
-          - ios
-          - android
 
 permissions:
   contents: read
@@ -39,6 +31,7 @@ jobs:
             tests/package-lock.json
             sdk-ios-android/package-lock.json
             ios-app-screenshot/package-lock.json
+            android-app-screenshot/package-lock.json
             live-camera-relay/package-lock.json
 
       - name: Install published-package test dependencies
@@ -49,8 +42,12 @@ jobs:
         working-directory: sdk-ios-android
         run: npm ci
 
-      - name: Install app screenshot example dependencies
+      - name: Install iOS screenshot dependencies
         working-directory: ios-app-screenshot
+        run: npm ci
+
+      - name: Install Android screenshot dependencies
+        working-directory: android-app-screenshot
         run: npm ci
 
       - name: Install camera example dependencies
@@ -65,8 +62,12 @@ jobs:
         working-directory: sdk-ios-android
         run: npm test
 
-      - name: Test app screenshot example
+      - name: Test iOS screenshot example
         working-directory: ios-app-screenshot
+        run: npm test
+
+      - name: Test Android screenshot example
+        working-directory: android-app-screenshot
         run: npm test
 
       - name: Test mosaic example
@@ -81,12 +82,23 @@ jobs:
         working-directory: live-camera-relay
         run: npm run typecheck
 
-  live:
-    if: github.event_name == 'workflow_dispatch' && inputs.live == true
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    environment: live
+  native-app-build:
+    name: Build ${{ matrix.platform }} sample app
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            runner: macos-14
+            directory: ios-app-screenshot
+            artifact: run-cloud-parity-ios-app
+            artifact-path: ios-app-screenshot/build/RunCloudProof.app.tar.gz
+          - platform: android
+            runner: ubuntu-latest
+            directory: android-app-screenshot
+            artifact: run-cloud-parity-android-app
+            artifact-path: android-app-screenshot/build/RunCloudProof.apk
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,17 +108,78 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: tests/package-lock.json
+          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
-      - name: Install published packages
-        working-directory: tests
+      - name: Install dependencies
+        working-directory: ${{ matrix.directory }}
         run: npm ci
 
-      - name: Run one live simulator lifecycle
-        working-directory: tests
+      - name: Build native app
+        working-directory: ${{ matrix.directory }}
+        run: npm run build:app
+
+      - name: Upload native app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact-path }}
+          if-no-files-found: error
+
+  live:
+    name: Live ${{ matrix.platform }} screenshot
+    if: github.event_name == 'workflow_dispatch' && inputs.live == true
+    needs: [test, native-app-build]
+    timeout-minutes: 10
+    environment: live
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            runner: macos-14
+            directory: ios-app-screenshot
+            artifact: run-cloud-parity-ios-app
+            artifact-file: RunCloudProof.app.tar.gz
+          - platform: android
+            runner: ubuntu-latest
+            directory: android-app-screenshot
+            artifact: run-cloud-parity-android-app
+            artifact-file: RunCloudProof.apk
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+
+      - name: Install published SDK
+        working-directory: ${{ matrix.directory }}
+        run: npm ci
+
+      - name: Download CI-built native app
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/native-app
+
+      - name: Upload and capture the CI-built native app
+        working-directory: ${{ matrix.directory }}
         env:
-          RUN_CLOUD_LIVE_E2E: "1"
-          RUN_CLOUD_LIVE_PLATFORM: ${{ inputs.platform }}
           RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
-          RUN_CLOUD_API_URL: ${{ vars.RUN_CLOUD_API_URL || 'https://api.newly.app' }}
-        run: npm run test:live
+        run: >-
+          npm run demo --
+          --app "$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
+          --output "$RUNNER_TEMP/${{ matrix.platform }}-run-cloud-proof.png"
+          --json
+
+      - name: Upload screenshot proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-run-cloud-proof
+          path: ${{ runner.temp }}/${{ matrix.platform }}-run-cloud-proof.png
+          if-no-files-found: error

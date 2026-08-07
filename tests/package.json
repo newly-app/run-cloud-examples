@@ -8,8 +8,8 @@
     "test:live": "node --test live-onboarding.test.mjs"
   },
   "dependencies": {
-    "@run-cloud/sdk": "0.4.0",
-    "runcloud": "0.1.6"
+    "@run-cloud/sdk": "0.13.0",
+    "runcloud": "^0.1.107"
   },
   "engines": {
     "node": ">=20"

@@ -1,7 +1,8 @@
 # run.cloud examples
 
-Runnable projects for trying run.cloud locally. Each example is self-contained
-and includes its own requirements, commands, and cleanup behavior.
+Runnable projects for trying run.cloud locally. Each example has its own npm
+package, requirements, commands, and cleanup behavior. The native screenshot
+examples share the PNG and lifecycle checks in `lib/`.
 
 ## Start with the TypeScript SDK
 
@@ -25,17 +26,32 @@ duration, JSON-output, and cleanup options.
 ### Real iOS app screenshot
 
 Build a native iOS app from Swift source, upload and launch it in a simulator,
-then save the simulator screenshot as raw PNG bytes.
+then save a structurally validated, nonblank PNG.
 
 ```bash
 git clone https://github.com/newly-app/run-cloud-examples.git
 cd run-cloud-examples/ios-app-screenshot
 npm install
-RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --open
+RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --json
 ```
 
 See [ios-app-screenshot/README.md](ios-app-screenshot/README.md) for the Xcode
 requirement, custom app archives, output paths, and cleanup behavior.
+
+### Real Android app screenshot
+
+Build a native Android app from Java source, upload and launch its APK in an
+emulator, then save a structurally validated, nonblank PNG.
+
+```bash
+git clone https://github.com/newly-app/run-cloud-examples.git
+cd run-cloud-examples/android-app-screenshot
+npm install
+RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --json
+```
+
+See [android-app-screenshot/README.md](android-app-screenshot/README.md) for the
+JDK and Android SDK requirements, custom APKs, JSON output, and strict cleanup.
 
 ### Eight-device mosaic
 
@@ -78,20 +94,19 @@ npm ci
 npm test
 ```
 
-An opt-in live test creates one iOS simulator through the SDK, inspects and
-controls it through the CLI, and releases it in `finally`:
+The manual GitHub Actions live matrix builds and executes both native screenshot
+examples against production. To run either example directly:
 
 ```bash
-cd tests
-RUN_CLOUD_LIVE_E2E=1 \
-RUN_CLOUD_API_KEY="rc_live_..." \
-RUN_CLOUD_API_URL="https://api.newly.app" \
-npm run test:live
+cd ios-app-screenshot # or android-app-screenshot
+export RUN_CLOUD_API_KEY="rc_live_..."
+npm run demo -- --json
 ```
 
-Set `RUN_CLOUD_LIVE_PLATFORM=android` to test Android instead. The GitHub
-Actions workflow exposes the same live test through an explicit manual dispatch
-so normal pull requests never create paid sessions.
+The live workflow is opt-in so normal pull requests never create paid sessions.
+Every pull request still builds the native fixtures and publishes them as the
+`run-cloud-parity-ios-app` and `run-cloud-parity-android-app` workflow artifacts.
+The live matrix downloads those artifacts before it creates a session.
 
 ## Agent skills
 
