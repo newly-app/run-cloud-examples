@@ -6,6 +6,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { resolveSdkRoot } from './build-app.mjs';
 
@@ -63,9 +64,8 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
 
 it('keeps the normalized tap target centered in portrait and landscape', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'run-cloud-tap-alignment-'));
-  const source = new URL(
-    './App/cloud/run/examples/screenshot/TapTargetAlignment.java',
-    import.meta.url,
+  const source = fileURLToPath(
+    new URL('./App/cloud/run/examples/screenshot/TapTargetAlignment.java', import.meta.url),
   );
   const testSource = join(directory, 'TapTargetAlignmentContract.java');
   await writeFile(
@@ -108,7 +108,7 @@ public final class TapTargetAlignmentContract {
   );
 
   try {
-    await execFileAsync('javac', ['-d', directory, source.pathname, testSource]);
+    await execFileAsync('javac', ['-d', directory, source, testSource]);
     await execFileAsync('java', [
       '-cp',
       directory,
