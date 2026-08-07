@@ -80,10 +80,11 @@ session. It handles the screenshot response as raw PNG bytes.
 
 The included app is also the deterministic fixture used by the simulator input
 parity suite. Reference coordinates below are normalized to the initial full
-portrait screen; `0,0` is top-left and `1,1` is bottom-right. The page scrolls
-when a shorter or landscape viewport cannot show every target at once. After a
-rotation, prefer the accessibility descriptions or transform the coordinates
-for the current orientation.
+portrait screen; `0,0` is top-left and `1,1` is bottom-right. The tap button stays
+anchored at `0.50,0.23` in both portrait and landscape. The page scrolls when a
+shorter or landscape viewport cannot show every other target at once. After a
+rotation, prefer the accessibility descriptions or transform the other
+coordinates for the current orientation.
 
 | Region | Accessibility description | Reference input |
 | --- | --- | --- |

@@ -29,7 +29,7 @@ export async function buildApp(dependencies = {}) {
   await mkdir(dexDirectory, { recursive: true });
 
   const run = dependencies.execFile ?? execFileAsync;
-  const javaSource = join(sourceDirectory, 'cloud', 'run', 'examples', 'screenshot', 'MainActivity.java');
+  const javaSourceDirectory = join(sourceDirectory, 'cloud', 'run', 'examples', 'screenshot');
   await run('javac', [
     '-encoding',
     'UTF-8',
@@ -41,7 +41,8 @@ export async function buildApp(dependencies = {}) {
     androidJar,
     '-d',
     classesDirectory,
-    javaSource,
+    join(javaSourceDirectory, 'MainActivity.java'),
+    join(javaSourceDirectory, 'TapTargetAlignment.java'),
   ]);
 
   const classFiles = await filesBelow(classesDirectory, '.class');

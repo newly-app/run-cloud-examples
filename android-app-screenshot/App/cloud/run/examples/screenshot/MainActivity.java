@@ -241,11 +241,13 @@ public final class MainActivity extends Activity {
             - viewportLocation[1]
             - spacer.getHeight()
             + target.getHeight() / 2;
-        int spacerHeight = Math.max(
-            0,
-            Math.round(viewport.getHeight() * TAP_TARGET_NORMALIZED_Y) - targetCenterWithoutSpacer
+        TapTargetAlignment.Result alignment = TapTargetAlignment.calculate(
+            viewport.getHeight(),
+            targetCenterWithoutSpacer,
+            TAP_TARGET_NORMALIZED_Y
         );
-        spacer.setLayoutParams(new LinearLayout.LayoutParams(1, spacerHeight));
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(1, alignment.spacerHeight));
+        target.setTranslationY(alignment.translationY);
     }
 
     private interface GestureListener {
