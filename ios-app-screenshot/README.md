@@ -72,7 +72,7 @@ the active operation, run the same cleanup, and return a nonzero exit code.
 --app FILE                   Upload an existing .app archive instead of building.
 --output FILE                Save the PNG at a different path.
 --ready-timeout-ms NUMBER    Wait 1000-300000 ms for an active session (default: 120000).
---settle-ms NUMBER           Wait 0-15000 ms before capture (default: 2000).
+--settle-ms NUMBER           Settle before capture (default: 2000; URL proof minimum: 5000).
 --json                       Print one machine-readable result to stdout.
 ```
 
@@ -104,10 +104,11 @@ then the deep link. It verifies both six-field acknowledgements, captures the
 app overlay after the deep link, and never prints the signed viewer URL. The
 first custom-scheme handoff can show the iOS **Open in Run Cloud Proof?**
 confirmation even after the URL operation succeeds. The demo waits for that
-prompt and confirms its **Open** button with an authenticated SDK tap before it
-settles and captures the overlay. If the prompt was already accepted, the same
-tap is harmless on this fixture. The repository's live workflow invokes the
-same proof against its CI-built app:
+prompt for at least five seconds, confirms its **Open** button with an
+authenticated SDK tap, then waits at least five more seconds for the proof app
+to render before capture. If the prompt was already accepted, the same tap is
+harmless on this fixture. The repository's live workflow invokes the same proof
+against its CI-built app:
 
 ```bash
 npm run demo -- \

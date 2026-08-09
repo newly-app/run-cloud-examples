@@ -77,7 +77,7 @@ the active operation, run the same cleanup, and return a nonzero exit code.
 --app FILE                   Upload an existing APK instead of building the sample.
 --output FILE                Save the PNG at a different path.
 --ready-timeout-ms NUMBER    Wait 1000-300000 ms for an active session (default: 120000).
---settle-ms NUMBER           Wait 0-15000 ms before capture (default: 2000).
+--settle-ms NUMBER           Settle before capture (default: 2000; URL proof minimum: 5000).
 --json                       Print one machine-readable result to stdout.
 ```
 
@@ -105,9 +105,10 @@ is already running. An overlay with accessibility description
 The documented `npm run demo -- --prove-open-urls --open --json` command uses
 the installed `@run-cloud/sdk` package to open the encoded HTTPS target first,
 then the deep link. It verifies both six-field acknowledgements, captures the
-app overlay after the deep link, and never prints the signed viewer URL. The
+app overlay after the deep link, and never prints the signed viewer URL.
 Android resolves the registered activity directly; the iOS-only confirmation
-tap is never sent to this emulator. The repository's live workflow invokes the
+tap is never sent to this emulator. URL proof allows each target at least five
+seconds to reach its final state. The repository's live workflow invokes the
 same proof against its CI-built app:
 
 ```bash

@@ -105,13 +105,13 @@ export function verifyScreenshotExample({
           'sleep:1000',
           'session:get',
           `session:open-url:${OPEN_URL_PROOF_TARGETS.https}`,
-          'sleep:25',
+          'sleep:5000',
           `session:open-url:${OPEN_URL_PROOF_TARGETS.deepLink}`,
           ...(platform === 'ios' ? [
-            'sleep:1000',
+            'sleep:5000',
             `session:tap:${IOS_DEEP_LINK_CONFIRMATION.point.x},${IOS_DEEP_LINK_CONFIRMATION.point.y}:${IOS_DEEP_LINK_CONFIRMATION.requestId}`,
           ] : []),
-          'sleep:25',
+          'sleep:5000',
           'session:screenshot',
           'session:delete',
           'asset:delete',
@@ -156,6 +156,7 @@ export function verifyScreenshotExample({
       const fixture = await setupFixture(platform);
       const png = pngFixture({ width: 3, height: 2 });
       const requests = [];
+      const waits = [];
       const fetch = async (url, init = {}) => {
         const parsedUrl = new URL(String(url));
         const path = parsedUrl.pathname;
@@ -252,6 +253,7 @@ export function verifyScreenshotExample({
                 fetch,
               },
               now: () => 42,
+              sleep: async (milliseconds) => waits.push(milliseconds),
             },
           ),
         );
@@ -279,6 +281,7 @@ export function verifyScreenshotExample({
           [OPEN_URL_PROOF_TARGETS.https, OPEN_URL_PROOF_TARGETS.deepLink],
         );
         assert.deepEqual(result.openUrls, proofResults(platform));
+        assert.deepEqual(waits, platform === 'ios' ? [5_000, 5_000, 5_000] : [5_000, 5_000]);
         assert.ok(
           requests
             .filter(({ url }) => url.startsWith('https://api.example.test/'))

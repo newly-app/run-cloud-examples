@@ -63,6 +63,7 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
   assert.match(readme, /never prints the signed viewer URL/);
   assert.match(readme, /Open in Run Cloud Proof/);
   assert.match(readme, /authenticated SDK tap/);
+  assert.match(readme, /at least five seconds[\s\S]*at least five more seconds/);
   assert.match(workflow, /directory: ios-app-screenshot/);
   assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });
