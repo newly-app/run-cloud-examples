@@ -76,6 +76,32 @@ The APK must support the Android Emulator architecture. The SDK checksums the
 APK, uploads its binary bytes, and finalizes the asset before creating the
 session. It handles the screenshot response as raw PNG bytes.
 
+## Deep-link proof
+
+The included app registers the synthetic `runcloudproof` scheme. Its single-task
+activity handles both a link that starts the app and one delivered while the app
+is already running. An overlay with accessibility description
+`deep-link-state` shows the complete encoded URI received from Android.
+
+Build and install the fixture, then open a link whose path, query, nested URL,
+and fragment all contain meaningful encoding:
+
+```bash
+npm run build:app
+
+SESSION_ID=$(runcloud android create \
+  --install ./build/RunCloudProof.apk \
+  --json | jq -r '.id')
+trap 'runcloud android delete "$SESSION_ID" >/dev/null 2>&1 || true' EXIT
+
+DEEP_LINK='runcloudproof://open/items%2F42?message=hello%20world&return=https%3A%2F%2Fexample.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof'
+runcloud android open-url "$DEEP_LINK" --id "$SESSION_ID" --json
+```
+
+The overlay should show the same URI byte for byte after the `Deep link
+(cold):` or `Deep link (warm):` label. Keep the shell quotes: `&` and `#` are
+part of the URI, not shell syntax.
+
 ## Interaction-proof layout
 
 The included app is also the deterministic fixture used by the simulator input

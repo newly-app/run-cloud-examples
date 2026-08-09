@@ -62,6 +62,29 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(readme, /After a\s+rotation/);
 });
 
+it('registers runcloudproof and visibly preserves cold and warm encoded deep links', async () => {
+  const manifest = await readFile(new URL('./App/AndroidManifest.xml', import.meta.url), 'utf8');
+  const source = await readFile(
+    new URL('./App/cloud/run/examples/screenshot/MainActivity.java', import.meta.url),
+    'utf8',
+  );
+  const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
+
+  assert.match(manifest, /android:launchMode="singleTask"/);
+  assert.match(manifest, /android\.intent\.action\.VIEW/);
+  assert.match(manifest, /android\.intent\.category\.BROWSABLE/);
+  assert.match(manifest, /android:scheme="runcloudproof"/);
+  assert.match(source, /showDeepLink\(getIntent\(\), "cold"\)/);
+  assert.match(source, /onNewIntent\(Intent intent\)[\s\S]*showDeepLink\(intent, "warm"\)/);
+  assert.match(source, /status\("", "deep-link-state"\)/);
+  assert.match(source, /uri\.toString\(\)/);
+  assert.match(
+    readme,
+    /runcloudproof:\/\/open\/items%2F42\?message=hello%20world&return=https%3A%2F%2Fexample\.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof/,
+  );
+  assert.match(readme, /same URI byte for byte/);
+});
+
 it('keeps the normalized tap target centered in portrait and landscape', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'run-cloud-tap-alignment-'));
   const source = fileURLToPath(

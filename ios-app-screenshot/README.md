@@ -72,6 +72,32 @@ device-signed App Store IPA. The SDK checksums the archive, uploads its binary
 bytes, and finalizes the asset before creating the session. It handles the
 screenshot response as raw PNG bytes.
 
+## Deep-link proof
+
+The included app registers the synthetic `runcloudproof` scheme. It handles a
+link that starts the app and another delivered while the app is already running.
+In both cases, an overlay with accessibility identifier `deep-link-state` shows
+the complete encoded URI received from iOS.
+
+Build and install the fixture, then open a link whose path, query, nested URL,
+and fragment all contain meaningful encoding:
+
+```bash
+npm run build:app
+
+SESSION_ID=$(runcloud ios create \
+  --install ./build/RunCloudProof.app.tar.gz \
+  --json | jq -r '.id')
+trap 'runcloud ios delete "$SESSION_ID" >/dev/null 2>&1 || true' EXIT
+
+DEEP_LINK='runcloudproof://open/items%2F42?message=hello%20world&return=https%3A%2F%2Fexample.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof'
+runcloud ios open-url "$DEEP_LINK" --id "$SESSION_ID" --json
+```
+
+The overlay should show the same URI byte for byte after the `Deep link
+(cold):` or `Deep link (warm):` label. Keep the shell quotes: `&` and `#` are
+part of the URI, not shell syntax.
+
 ## Interaction-proof layout
 
 The included app is also the deterministic fixture used by the simulator input

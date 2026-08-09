@@ -2,9 +2,11 @@ package cloud.run.examples.screenshot;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -14,6 +16,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -27,6 +30,7 @@ public final class MainActivity extends Activity {
     private TextView swipeState;
     private TextView gestureState;
     private TextView keyState;
+    private TextView deepLinkState;
     private int tapCount;
 
     @Override
@@ -135,9 +139,39 @@ public final class MainActivity extends Activity {
             ScrollView.LayoutParams.MATCH_PARENT,
             ScrollView.LayoutParams.WRAP_CONTENT
         ));
-        setContentView(page);
+
+        FrameLayout root = new FrameLayout(this);
+        root.addView(page, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        deepLinkState = status("", "deep-link-state");
+        deepLinkState.setTextSize(12);
+        deepLinkState.setPadding(dp(12), dp(10), dp(12), dp(10));
+        deepLinkState.setSingleLine(false);
+        deepLinkState.setHorizontallyScrolling(false);
+        deepLinkState.setTextIsSelectable(true);
+        deepLinkState.setBackground(card(Color.rgb(5, 31, 41), CYAN, 10));
+        deepLinkState.setVisibility(View.GONE);
+        FrameLayout.LayoutParams deepLinkLayout = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP
+        );
+        deepLinkLayout.setMargins(dp(12), dp(8), dp(12), 0);
+        root.addView(deepLinkState, deepLinkLayout);
+
+        setContentView(root);
+        showDeepLink(getIntent(), "cold");
         content.post(() -> alignTapTarget(proofTopSpacer, tapButton));
         content.requestFocus();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        showDeepLink(intent, "warm");
     }
 
     @Override
@@ -151,6 +185,13 @@ public final class MainActivity extends Activity {
 
     private void showKey(String value) {
         if (keyState != null) keyState.setText("Key: " + value);
+    }
+
+    private void showDeepLink(Intent intent, String delivery) {
+        Uri uri = intent == null ? null : intent.getData();
+        if (uri == null || !"runcloudproof".equalsIgnoreCase(uri.getScheme())) return;
+        deepLinkState.setText("Deep link (" + delivery + "):\n" + uri.toString());
+        deepLinkState.setVisibility(View.VISIBLE);
     }
 
     private String keyWithModifiers(KeyEvent event, String key) {

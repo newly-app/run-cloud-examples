@@ -40,3 +40,21 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(readme, /tap `0\.50,0\.23`/);
   assert.match(readme, /After a\s+rotation/);
 });
+
+it('registers runcloudproof and visibly preserves cold and warm encoded deep links', async () => {
+  const source = await readFile(new URL('./App/AppDelegate.swift', import.meta.url), 'utf8');
+  const plist = await readFile(new URL('./App/Info.plist', import.meta.url), 'utf8');
+  const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
+
+  assert.match(plist, /CFBundleURLSchemes[\s\S]*<string>runcloudproof<\/string>/);
+  assert.match(source, /launchOptions\?\[\.url\][\s\S]*delivery: "cold"/);
+  assert.match(source, /open url: URL[\s\S]*delivery: "warm"/);
+  assert.match(source, /id: "deep-link-state"/);
+  assert.match(source, /url\.absoluteString/);
+  assert.match(source, /lineBreakMode = \.byCharWrapping/);
+  assert.match(
+    readme,
+    /runcloudproof:\/\/open\/items%2F42\?message=hello%20world&return=https%3A%2F%2Fexample\.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof/,
+  );
+  assert.match(readme, /same URI byte for byte/);
+});
