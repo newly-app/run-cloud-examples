@@ -19,7 +19,7 @@ used by `build-app.mjs`: `javac`, `d8`, `aapt2`, `zipalign`, and `apksigner`.
 ```bash
 npm install
 export RUN_CLOUD_API_KEY="rc_live_..."
-npm run demo -- --json
+npm run demo -- --prove-open-urls --open --json
 ```
 
 The command builds and uploads `RunCloudProof.apk`, waits for the session to
@@ -38,6 +38,24 @@ The final JSON object is stable automation output:
   "byteSize": 123456,
   "width": 1080,
   "height": 2400,
+  "openUrls": {
+    "https": {
+      "ok": true,
+      "platform": "android",
+      "sessionId": "sim_...",
+      "device": "device_...",
+      "leaseId": "lease_...",
+      "url": "https://example.com/search?q=run%20cloud&return=%2Fdocs%3Ftab%3Dmobile"
+    },
+    "deepLink": {
+      "ok": true,
+      "platform": "android",
+      "sessionId": "sim_...",
+      "device": "device_...",
+      "leaseId": "lease_...",
+      "url": "runcloudproof://open/items%2F42?message=hello%20world&return=https%3A%2F%2Fexample.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof"
+    }
+  },
   "cleanup": { "session": "released", "asset": "deleted" }
 }
 ```
@@ -55,6 +73,7 @@ the active operation, run the same cleanup, and return a nonzero exit code.
 
 ```text
 --open                       Open the live viewer in the system browser.
+--prove-open-urls            Open encoded HTTPS and runcloudproof targets through the SDK.
 --app FILE                   Upload an existing APK instead of building the sample.
 --output FILE                Save the PNG at a different path.
 --ready-timeout-ms NUMBER    Wait 1000-300000 ms for an active session (default: 120000).
@@ -83,8 +102,22 @@ activity handles both a link that starts the app and one delivered while the app
 is already running. An overlay with accessibility description
 `deep-link-state` shows the complete encoded URI received from Android.
 
-Build and install the fixture, then open a link whose path, query, nested URL,
-and fragment all contain meaningful encoding:
+The documented `npm run demo -- --prove-open-urls --open --json` command uses
+the installed `@run-cloud/sdk` package to open the encoded HTTPS target first,
+then the deep link. It verifies both six-field acknowledgements, captures the
+app overlay after the deep link, and never prints the signed viewer URL. The
+repository's live workflow invokes the same proof against its CI-built app:
+
+```bash
+npm run demo -- \
+  --app "$RUNNER_TEMP/native-app/RunCloudProof.apk" \
+  --output "$RUNNER_TEMP/android-run-cloud-proof.png" \
+  --prove-open-urls \
+  --json
+```
+
+To repeat the custom-scheme step with the packaged CLI, build and install the
+fixture, then open the same fully encoded target:
 
 ```bash
 npm run build:app

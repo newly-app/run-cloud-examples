@@ -54,7 +54,8 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(source, /event\.isMetaPressed\(\), "Command"/);
   assert.match(source, /setClickable\(true\)/);
   assert.match(source, /performClick\(\)/);
-  assert.match(readme, /npm run demo -- --json/);
+  assert.match(readme, /npm run demo -- --prove-open-urls --open --json/);
+  assert.match(readme, /--app "\$RUNNER_TEMP\/native-app\/RunCloudProof\.apk"[\s\S]*--prove-open-urls[\s\S]*--json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);
   assert.match(readme, /tap `0\.50,0\.23`/);
@@ -69,6 +70,7 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
     'utf8',
   );
   const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
+  const workflow = await readFile(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
 
   assert.match(manifest, /android:launchMode="singleTask"/);
   assert.match(manifest, /android\.intent\.action\.VIEW/);
@@ -83,6 +85,10 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
     /runcloudproof:\/\/open\/items%2F42\?message=hello%20world&return=https%3A%2F%2Fexample\.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof/,
   );
   assert.match(readme, /same URI byte for byte/);
+  assert.match(readme, /both six-field acknowledgements/);
+  assert.match(readme, /never prints the signed viewer URL/);
+  assert.match(workflow, /directory: android-app-screenshot/);
+  assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });
 
 it('keeps the normalized tap target centered in portrait and landscape', async () => {
