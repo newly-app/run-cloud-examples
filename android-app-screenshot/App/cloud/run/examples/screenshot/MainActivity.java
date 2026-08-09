@@ -5,7 +5,9 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -16,6 +18,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 
 public final class MainActivity extends Activity {
@@ -27,7 +30,12 @@ public final class MainActivity extends Activity {
     private TextView swipeState;
     private TextView gestureState;
     private TextView keyState;
+    private TextView accessibilityState;
+    private TextView accessibilityNestedLabel;
+    private Switch notificationsToggle;
+    private Button navigationButton;
     private int tapCount;
+    private boolean showingAccessibilityDetails;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -128,6 +136,8 @@ public final class MainActivity extends Activity {
             if (y > dp(24)) swipeState.setText("Swipe: moved");
         });
         content.addView(scroll, fixedHeight(190));
+        content.addView(space(9));
+        content.addView(accessibilityProof());
 
         ScrollView page = new ScrollView(this);
         page.setFillViewport(true);
@@ -151,6 +161,13 @@ public final class MainActivity extends Activity {
 
     private void showKey(String value) {
         if (keyState != null) keyState.setText("Key: " + value);
+    }
+
+    private void updateAccessibilityState() {
+        accessibilityState.setText(
+            "Notifications: " + (notificationsToggle.isChecked() ? "on" : "off")
+                + " · Screen: " + (showingAccessibilityDetails ? "details" : "overview")
+        );
     }
 
     private String keyWithModifiers(KeyEvent event, String key) {
@@ -186,6 +203,93 @@ public final class MainActivity extends Activity {
         card.addView(text(detail, 13, Typeface.NORMAL, MUTED));
         card.setLayoutParams(fixedHeight(112));
         return card;
+    }
+
+    private View accessibilityProof() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
+        card.setBackground(card(Color.rgb(25, 61, 70), Color.rgb(55, 79, 87), 12));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            card.setAccessibilityPaneTitle("Accessibility proof group");
+        }
+
+        TextView heading = text("ACCESSIBILITY PROOF", 15, Typeface.BOLD, GREEN);
+        heading.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) heading.setAccessibilityHeading(true);
+        card.addView(heading);
+
+        accessibilityNestedLabel = status("Nested label: overview", null);
+        accessibilityState = status("Notifications: off · Screen: overview", null);
+        card.addView(accessibilityNestedLabel);
+        card.addView(accessibilityState);
+        card.addView(space(8));
+
+        EditText name = accessibilityField("Name", "Ada", false);
+        card.addView(name, fixedHeight(40));
+        card.addView(space(8));
+
+        EditText password = accessibilityField("Password", "runcloud-secret-42", true);
+        card.addView(password, fixedHeight(40));
+        card.addView(space(8));
+
+        LinearLayout toggleRow = new LinearLayout(this);
+        toggleRow.setOrientation(LinearLayout.HORIZONTAL);
+        toggleRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView toggleLabel = text("Notifications", 14, Typeface.NORMAL, Color.WHITE);
+        notificationsToggle = new Switch(this);
+        notificationsToggle.setContentDescription("Notifications");
+        notificationsToggle.setChecked(false);
+        notificationsToggle.setOnCheckedChangeListener((button, checked) -> updateAccessibilityState());
+        toggleRow.addView(toggleLabel, new LinearLayout.LayoutParams(0, dp(42), 1));
+        toggleRow.addView(notificationsToggle, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            dp(42)
+        ));
+        card.addView(toggleRow);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        Button disabled = new Button(this);
+        disabled.setText("SUBMIT DISABLED");
+        disabled.setContentDescription("Submit");
+        disabled.setEnabled(false);
+        navigationButton = new Button(this);
+        navigationButton.setText("OPEN DETAILS");
+        navigationButton.setContentDescription("Open details");
+        navigationButton.setOnClickListener((view) -> {
+            showingAccessibilityDetails = !showingAccessibilityDetails;
+            accessibilityNestedLabel.setText(
+                showingAccessibilityDetails ? "Nested label: details" : "Nested label: overview"
+            );
+            navigationButton.setText(showingAccessibilityDetails ? "BACK TO OVERVIEW" : "OPEN DETAILS");
+            navigationButton.setContentDescription(
+                showingAccessibilityDetails ? "Back to overview" : "Open details"
+            );
+            updateAccessibilityState();
+        });
+        buttons.addView(disabled, new LinearLayout.LayoutParams(0, dp(44), 1));
+        buttons.addView(navigationButton, new LinearLayout.LayoutParams(0, dp(44), 1));
+        card.addView(buttons);
+        return card;
+    }
+
+    private EditText accessibilityField(String label, String value, boolean secure) {
+        EditText field = new EditText(this);
+        field.setHint(label);
+        field.setContentDescription(label);
+        field.setText(value);
+        field.setTextColor(Color.WHITE);
+        field.setHintTextColor(Color.rgb(145, 170, 181));
+        field.setTextSize(15);
+        field.setSingleLine(true);
+        field.setPadding(dp(12), 0, dp(12), 0);
+        field.setBackground(card(Color.rgb(22, 51, 60), Color.rgb(87, 111, 120), 9));
+        field.setInputType(
+            InputType.TYPE_CLASS_TEXT
+                | (secure ? InputType.TYPE_TEXT_VARIATION_PASSWORD : InputType.TYPE_TEXT_VARIATION_NORMAL)
+        );
+        return field;
     }
 
     private TextView text(String value, int size, int style, int color) {
