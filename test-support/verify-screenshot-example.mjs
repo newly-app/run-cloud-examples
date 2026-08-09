@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
   browserCommand,
+  IOS_DEEP_LINK_CONFIRMATION,
   OPEN_URL_PROOF_TARGETS,
   parseScreenshotOptions,
   verifyOpenUrlResult,
@@ -106,6 +107,10 @@ export function verifyScreenshotExample({
           `session:open-url:${OPEN_URL_PROOF_TARGETS.https}`,
           'sleep:25',
           `session:open-url:${OPEN_URL_PROOF_TARGETS.deepLink}`,
+          ...(platform === 'ios' ? [
+            'sleep:1000',
+            `session:tap:${IOS_DEEP_LINK_CONFIRMATION.point.x},${IOS_DEEP_LINK_CONFIRMATION.point.y}:${IOS_DEEP_LINK_CONFIRMATION.requestId}`,
+          ] : []),
           'sleep:25',
           'session:screenshot',
           'session:delete',
@@ -204,6 +209,18 @@ export function verifyScreenshotExample({
           const body = JSON.parse(init.body);
           return json(openUrlResponse(platform, body.url));
         }
+        if (path === `/run-cloud/${platform}/${platform}-session/interactions`) {
+          const body = JSON.parse(init.body);
+          assert.equal(platform, 'ios', 'Android must not receive an iOS prompt-confirmation tap');
+          assert.deepEqual(body, {
+            action: 'tap',
+            x: IOS_DEEP_LINK_CONFIRMATION.point.x,
+            y: IOS_DEEP_LINK_CONFIRMATION.point.y,
+            requestId: IOS_DEEP_LINK_CONFIRMATION.requestId,
+            timeoutMs: IOS_DEEP_LINK_CONFIRMATION.timeoutMs,
+          });
+          return json(tapResponse(platform, body.requestId));
+        }
         if (path === `/run-cloud/${platform}/${platform}-session/screenshot`) {
           return new Response(png, {
             status: 200,
@@ -248,6 +265,9 @@ export function verifyScreenshotExample({
             ['POST', `/run-cloud/${platform}`],
             ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
             ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
+            ...(platform === 'ios'
+              ? [['POST', `/run-cloud/${platform}/${platform}-session/interactions`]]
+              : []),
             ['GET', `/run-cloud/${platform}/${platform}-session/screenshot`],
             ['DELETE', `/run-cloud/${platform}/${platform}-session`],
             ['DELETE', `/run-cloud/assets/${platform}-asset`],
@@ -476,6 +496,10 @@ function fakeCloud(platform, events, options = {}) {
       events.push(`session:open-url:${url}`);
       return openUrlResponse(platform, url, sessionId);
     },
+    async tap(sessionId, point, options) {
+      events.push(`session:tap:${point.x},${point.y}:${options.requestId}`);
+      return tapResponse(platform, options.requestId, sessionId);
+    },
     async delete(sessionId) {
       events.push('session:delete');
       result.deletedSessionId = sessionId;
@@ -518,6 +542,22 @@ function proofResults(platform) {
   return {
     https: openUrlResponse(platform, OPEN_URL_PROOF_TARGETS.https),
     deepLink: openUrlResponse(platform, OPEN_URL_PROOF_TARGETS.deepLink),
+  };
+}
+
+function tapResponse(platform, requestId, sessionId = `${platform}-session`) {
+  const now = new Date(0).toISOString();
+  return {
+    ok: true,
+    requestId,
+    sessionId,
+    platform,
+    action: 'tap',
+    status: 'completed',
+    acceptedAt: now,
+    completedAt: now,
+    durationMs: 1,
+    result: { pointCount: 1 },
   };
 }
 

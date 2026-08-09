@@ -37,7 +37,8 @@ RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --json
 ```
 
 Add `--prove-open-urls --open` to run the packaged SDK HTTPS and encoded
-deep-link proof and watch the result. See
+deep-link proof and watch the result. The iOS example also confirms the system
+custom-scheme prompt through the authenticated SDK before capture. See
 [ios-app-screenshot/README.md](ios-app-screenshot/README.md) for the exact
 command, Xcode requirement, custom app archives, output paths, and cleanup.
 

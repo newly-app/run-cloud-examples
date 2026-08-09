@@ -106,7 +106,9 @@ The documented `npm run demo -- --prove-open-urls --open --json` command uses
 the installed `@run-cloud/sdk` package to open the encoded HTTPS target first,
 then the deep link. It verifies both six-field acknowledgements, captures the
 app overlay after the deep link, and never prints the signed viewer URL. The
-repository's live workflow invokes the same proof against its CI-built app:
+Android resolves the registered activity directly; the iOS-only confirmation
+tap is never sent to this emulator. The repository's live workflow invokes the
+same proof against its CI-built app:
 
 ```bash
 npm run demo -- \

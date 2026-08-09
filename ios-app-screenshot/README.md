@@ -102,7 +102,12 @@ The documented `npm run demo -- --prove-open-urls --open --json` command uses
 the installed `@run-cloud/sdk` package to open the encoded HTTPS target first,
 then the deep link. It verifies both six-field acknowledgements, captures the
 app overlay after the deep link, and never prints the signed viewer URL. The
-repository's live workflow invokes the same proof against its CI-built app:
+first custom-scheme handoff can show the iOS **Open in Run Cloud Proof?**
+confirmation even after the URL operation succeeds. The demo waits for that
+prompt and confirms its **Open** button with an authenticated SDK tap before it
+settles and captures the overlay. If the prompt was already accepted, the same
+tap is harmless on this fixture. The repository's live workflow invokes the
+same proof against its CI-built app:
 
 ```bash
 npm run demo -- \
