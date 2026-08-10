@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import {
   browserCommand,
   IOS_DEEP_LINK_CONFIRMATION,
+  IOS_SAFARI_START_PAGE_DISMISSAL,
   OPEN_URL_PROOF_TARGETS,
   parseScreenshotOptions,
   verifyOpenUrlResult,
@@ -106,6 +107,10 @@ export function verifyScreenshotExample({
           'session:get',
           `session:open-url:${OPEN_URL_PROOF_TARGETS.https}`,
           'sleep:5000',
+          ...(platform === 'ios' ? [
+            `session:tap:${IOS_SAFARI_START_PAGE_DISMISSAL.point.x},${IOS_SAFARI_START_PAGE_DISMISSAL.point.y}:${IOS_SAFARI_START_PAGE_DISMISSAL.requestId}`,
+            'sleep:2000',
+          ] : []),
           `session:open-url:${OPEN_URL_PROOF_TARGETS.deepLink}`,
           ...(platform === 'ios' ? [
             'sleep:5000',
@@ -212,13 +217,16 @@ export function verifyScreenshotExample({
         }
         if (path === `/run-cloud/${platform}/${platform}-session/interactions`) {
           const body = JSON.parse(init.body);
-          assert.equal(platform, 'ios', 'Android must not receive an iOS prompt-confirmation tap');
+          assert.equal(platform, 'ios', 'Android must not receive an iOS browser-preparation or prompt-confirmation tap');
+          const expected = body.requestId === IOS_SAFARI_START_PAGE_DISMISSAL.requestId
+            ? IOS_SAFARI_START_PAGE_DISMISSAL
+            : IOS_DEEP_LINK_CONFIRMATION;
           assert.deepEqual(body, {
             action: 'tap',
-            x: IOS_DEEP_LINK_CONFIRMATION.point.x,
-            y: IOS_DEEP_LINK_CONFIRMATION.point.y,
-            requestId: IOS_DEEP_LINK_CONFIRMATION.requestId,
-            timeoutMs: IOS_DEEP_LINK_CONFIRMATION.timeoutMs,
+            x: expected.point.x,
+            y: expected.point.y,
+            requestId: expected.requestId,
+            timeoutMs: expected.timeoutMs,
           });
           return json(tapResponse(platform, body.requestId));
         }
@@ -266,6 +274,9 @@ export function verifyScreenshotExample({
             ['POST', `/run-cloud/assets/${platform}-asset/finalize`],
             ['POST', `/run-cloud/${platform}`],
             ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
+            ...(platform === 'ios'
+              ? [['POST', `/run-cloud/${platform}/${platform}-session/interactions`]]
+              : []),
             ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
             ...(platform === 'ios'
               ? [['POST', `/run-cloud/${platform}/${platform}-session/interactions`]]
@@ -281,7 +292,7 @@ export function verifyScreenshotExample({
           [OPEN_URL_PROOF_TARGETS.https, OPEN_URL_PROOF_TARGETS.deepLink],
         );
         assert.deepEqual(result.openUrls, proofResults(platform));
-        assert.deepEqual(waits, platform === 'ios' ? [5_000, 5_000, 5_000] : [5_000, 5_000]);
+        assert.deepEqual(waits, platform === 'ios' ? [5_000, 2_000, 5_000, 5_000] : [5_000, 5_000]);
         assert.ok(
           requests
             .filter(({ url }) => url.startsWith('https://api.example.test/'))
