@@ -102,6 +102,8 @@ The documented `npm run demo -- --prove-open-urls --open --json` command uses
 the installed `@run-cloud/sdk` package to open the encoded HTTPS target first,
 then the deep link. It verifies both six-field acknowledgements, captures the
 app overlay after the deep link, and never prints the signed viewer URL. The
+demo dismisses Safari's fresh-session Start Page after the HTTPS check so it
+cannot delay the following custom-scheme confirmation. The
 first custom-scheme handoff can show the iOS **Open in Run Cloud Proof?**
 confirmation even after the URL operation succeeds. The demo waits for that
 prompt for at least five seconds, confirms its **Open** button with an
