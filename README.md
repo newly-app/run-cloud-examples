@@ -26,7 +26,8 @@ duration, JSON-output, and cleanup options.
 ### Real iOS app screenshot
 
 Build a native iOS app from Swift source, upload and launch it in a simulator,
-then save a structurally validated, nonblank PNG.
+then save a structurally validated, nonblank PNG. The fixture also registers
+`runcloudproof` and displays the complete encoded URI delivered by a deep link.
 
 ```bash
 git clone https://github.com/newly-app/run-cloud-examples.git
@@ -35,13 +36,18 @@ npm install
 RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --json
 ```
 
-See [ios-app-screenshot/README.md](ios-app-screenshot/README.md) for the Xcode
-requirement, custom app archives, output paths, and cleanup behavior.
+Add `--prove-open-urls --open` to run the packaged SDK HTTPS and encoded
+deep-link proof and watch the result. The iOS example also confirms the system
+custom-scheme prompt through the authenticated SDK before capture. See
+[ios-app-screenshot/README.md](ios-app-screenshot/README.md) for the exact
+command, Xcode requirement, custom app archives, output paths, and cleanup.
 
 ### Real Android app screenshot
 
 Build a native Android app from Java source, upload and launch its APK in an
-emulator, then save a structurally validated, nonblank PNG.
+emulator, then save a structurally validated, nonblank PNG. The fixture also
+registers `runcloudproof` and displays the complete encoded URI delivered by a
+deep link.
 
 ```bash
 git clone https://github.com/newly-app/run-cloud-examples.git
@@ -50,8 +56,11 @@ npm install
 RUN_CLOUD_API_KEY="rc_live_..." npm run demo -- --json
 ```
 
-See [android-app-screenshot/README.md](android-app-screenshot/README.md) for the
-JDK and Android SDK requirements, custom APKs, JSON output, and strict cleanup.
+Add `--prove-open-urls --open` to run the packaged SDK HTTPS and encoded
+deep-link proof and watch the result. See
+[android-app-screenshot/README.md](android-app-screenshot/README.md) for the
+exact command, JDK and Android SDK requirements, custom APKs, JSON output, and
+strict cleanup.
 
 ### Eight-device mosaic
 
@@ -95,12 +104,13 @@ npm test
 ```
 
 The manual GitHub Actions live matrix builds and executes both native screenshot
-examples against production. To run either example directly:
+examples against production, including both URL-opening targets. To run either
+example directly:
 
 ```bash
 cd ios-app-screenshot # or android-app-screenshot
 export RUN_CLOUD_API_KEY="rc_live_..."
-npm run demo -- --json
+npm run demo -- --prove-open-urls --open --json
 ```
 
 The live workflow is opt-in so normal pull requests never create paid sessions.

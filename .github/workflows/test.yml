@@ -187,6 +187,7 @@ jobs:
           npm run demo --
           --app "$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
           --output "$RUNNER_TEMP/${{ matrix.platform }}-run-cloud-proof.png"
+          --prove-open-urls
           --json
 
       - name: Upload screenshot proof

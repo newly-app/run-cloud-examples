@@ -45,9 +45,36 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /page\.contentLayoutGuide/);
   assert.match(plist, /UIInterfaceOrientationLandscapeLeft/);
   assert.match(plist, /UIInterfaceOrientationLandscapeRight/);
-  assert.match(readme, /npm run demo -- --json/);
+  assert.match(readme, /npm run demo -- --prove-open-urls --open --json/);
+  assert.match(readme, /--app "\$RUNNER_TEMP\/native-app\/RunCloudProof\.app\.tar\.gz"[\s\S]*--prove-open-urls[\s\S]*--json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);
   assert.match(readme, /tap `0\.50,0\.23`/);
   assert.match(readme, /After a\s+rotation/);
+});
+
+it('registers runcloudproof and visibly preserves cold and warm encoded deep links', async () => {
+  const source = await readFile(new URL('./App/AppDelegate.swift', import.meta.url), 'utf8');
+  const plist = await readFile(new URL('./App/Info.plist', import.meta.url), 'utf8');
+  const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
+  const workflow = await readFile(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
+
+  assert.match(plist, /CFBundleURLSchemes[\s\S]*<string>runcloudproof<\/string>/);
+  assert.match(source, /launchOptions\?\[\.url\][\s\S]*delivery: "cold"/);
+  assert.match(source, /open url: URL[\s\S]*delivery: "warm"/);
+  assert.match(source, /id: "deep-link-state"/);
+  assert.match(source, /url\.absoluteString/);
+  assert.match(source, /lineBreakMode = \.byCharWrapping/);
+  assert.match(
+    readme,
+    /runcloudproof:\/\/open\/items%2F42\?message=hello%20world&return=https%3A%2F%2Fexample\.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof/,
+  );
+  assert.match(readme, /same URI byte for byte/);
+  assert.match(readme, /both six-field acknowledgements/);
+  assert.match(readme, /never prints the signed viewer URL/);
+  assert.match(readme, /Open in Run Cloud Proof/);
+  assert.match(readme, /authenticated SDK tap/);
+  assert.match(readme, /at least five seconds[\s\S]*at least five more seconds/);
+  assert.match(workflow, /directory: ios-app-screenshot/);
+  assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });

@@ -3,7 +3,13 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { browserCommand, parseScreenshotOptions } from '../lib/screenshot-demo.mjs';
+import {
+  browserCommand,
+  IOS_DEEP_LINK_CONFIRMATION,
+  OPEN_URL_PROOF_TARGETS,
+  parseScreenshotOptions,
+  verifyOpenUrlResult,
+} from '../lib/screenshot-demo.mjs';
 import { inspectPng } from '../lib/png.mjs';
 import { pngFixture } from './png-fixture.mjs';
 
@@ -16,11 +22,12 @@ export function verifyScreenshotExample({
   describe(`${platform}-app-screenshot example`, () => {
     it('accepts mirrored automation options and rejects unbounded waits', () => {
       const options = parseScreenshotOptions(
-        ['--json', '--open', '--settle-ms', '0', '--ready-timeout-ms', '1000'],
+        ['--json', '--open', '--prove-open-urls', '--settle-ms', '0', '--ready-timeout-ms', '1000'],
         'proof.png',
       );
       assert.equal(options.json, true);
       assert.equal(options.open, true);
+      assert.equal(options.proveOpenUrls, true);
       assert.equal(options.settleMs, 0);
       assert.equal(options.readyTimeoutMs, 1_000);
       assert.throws(
@@ -51,6 +58,7 @@ export function verifyScreenshotExample({
               '--output', fixture.outputPath,
               '--ready-timeout-ms', '3000',
               '--settle-ms', '25',
+              '--prove-open-urls',
               '--json',
             ],
             {
@@ -72,9 +80,11 @@ export function verifyScreenshotExample({
           byteSize: fake.png.byteLength,
           width: 3,
           height: 2,
+          openUrls: proofResults(platform),
           cleanup: { session: 'released', asset: 'deleted' },
         });
         assert.deepEqual(JSON.parse(stdout.trim()), result);
+        assert.doesNotMatch(stdout, /viewer\.example|rc_example/i);
         assert.match(stderr, /Uploading/);
         assert.match(stderr, /Capturing/);
         assert.deepEqual(await readFile(fixture.outputPath), fake.png);
@@ -94,7 +104,14 @@ export function verifyScreenshotExample({
           'session:create',
           'sleep:1000',
           'session:get',
-          'sleep:25',
+          `session:open-url:${OPEN_URL_PROOF_TARGETS.https}`,
+          'sleep:5000',
+          `session:open-url:${OPEN_URL_PROOF_TARGETS.deepLink}`,
+          ...(platform === 'ios' ? [
+            'sleep:5000',
+            `session:tap:${IOS_DEEP_LINK_CONFIRMATION.point.x},${IOS_DEEP_LINK_CONFIRMATION.point.y}:${IOS_DEEP_LINK_CONFIRMATION.requestId}`,
+          ] : []),
+          'sleep:5000',
           'session:screenshot',
           'session:delete',
           'asset:delete',
@@ -139,6 +156,7 @@ export function verifyScreenshotExample({
       const fixture = await setupFixture(platform);
       const png = pngFixture({ width: 3, height: 2 });
       const requests = [];
+      const waits = [];
       const fetch = async (url, init = {}) => {
         const parsedUrl = new URL(String(url));
         const path = parsedUrl.pathname;
@@ -188,6 +206,22 @@ export function verifyScreenshotExample({
           assert.deepEqual(body.installAssets, [`${platform}-asset`]);
           return json(sessionResponse(platform), 201);
         }
+        if (path === `/run-cloud/${platform}/${platform}-session/open-url`) {
+          const body = JSON.parse(init.body);
+          return json(openUrlResponse(platform, body.url));
+        }
+        if (path === `/run-cloud/${platform}/${platform}-session/interactions`) {
+          const body = JSON.parse(init.body);
+          assert.equal(platform, 'ios', 'Android must not receive an iOS prompt-confirmation tap');
+          assert.deepEqual(body, {
+            action: 'tap',
+            x: IOS_DEEP_LINK_CONFIRMATION.point.x,
+            y: IOS_DEEP_LINK_CONFIRMATION.point.y,
+            requestId: IOS_DEEP_LINK_CONFIRMATION.requestId,
+            timeoutMs: IOS_DEEP_LINK_CONFIRMATION.timeoutMs,
+          });
+          return json(tapResponse(platform, body.requestId));
+        }
         if (path === `/run-cloud/${platform}/${platform}-session/screenshot`) {
           return new Response(png, {
             status: 200,
@@ -206,7 +240,12 @@ export function verifyScreenshotExample({
       try {
         const { result } = await captureConsole(() =>
           runDemo(
-            ['--app', fixture.appPath, '--output', fixture.outputPath, '--settle-ms', '0'],
+            [
+              '--app', fixture.appPath,
+              '--output', fixture.outputPath,
+              '--settle-ms', '0',
+              '--prove-open-urls',
+            ],
             {
               clientOptions: {
                 apiKey: 'rc_example_transport_test',
@@ -214,6 +253,7 @@ export function verifyScreenshotExample({
                 fetch,
               },
               now: () => 42,
+              sleep: async (milliseconds) => waits.push(milliseconds),
             },
           ),
         );
@@ -225,11 +265,23 @@ export function verifyScreenshotExample({
             ['PUT', `/${platform}-asset`],
             ['POST', `/run-cloud/assets/${platform}-asset/finalize`],
             ['POST', `/run-cloud/${platform}`],
+            ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
+            ['POST', `/run-cloud/${platform}/${platform}-session/open-url`],
+            ...(platform === 'ios'
+              ? [['POST', `/run-cloud/${platform}/${platform}-session/interactions`]]
+              : []),
             ['GET', `/run-cloud/${platform}/${platform}-session/screenshot`],
             ['DELETE', `/run-cloud/${platform}/${platform}-session`],
             ['DELETE', `/run-cloud/assets/${platform}-asset`],
           ],
         );
+        const openRequests = requests.filter(({ path }) => path.endsWith('/open-url'));
+        assert.deepEqual(
+          openRequests.map(({ body }) => JSON.parse(body).url),
+          [OPEN_URL_PROOF_TARGETS.https, OPEN_URL_PROOF_TARGETS.deepLink],
+        );
+        assert.deepEqual(result.openUrls, proofResults(platform));
+        assert.deepEqual(waits, platform === 'ios' ? [5_000, 5_000, 5_000] : [5_000, 5_000]);
         assert.ok(
           requests
             .filter(({ url }) => url.startsWith('https://api.example.test/'))
@@ -358,6 +410,37 @@ export function verifyScreenshotExample({
 }
 
 describe('shared screenshot validation and browser support', () => {
+  it('rejects an acknowledgement that changes URL encoding or lease scope', () => {
+    const valid = openUrlResponse('ios', OPEN_URL_PROOF_TARGETS.deepLink);
+    assert.deepEqual(
+      verifyOpenUrlResult(
+        { ...valid, viewerUrl: 'https://viewer.example/signed?token=secret' },
+        'ios',
+        'ios-session',
+        OPEN_URL_PROOF_TARGETS.deepLink,
+      ),
+      valid,
+    );
+    assert.throws(
+      () => verifyOpenUrlResult(
+        { ...valid, url: decodeURIComponent(valid.url) },
+        'ios',
+        'ios-session',
+        OPEN_URL_PROOF_TARGETS.deepLink,
+      ),
+      /exact input URI/,
+    );
+    assert.throws(
+      () => verifyOpenUrlResult(
+        { ...valid, leaseId: '' },
+        'ios',
+        'ios-session',
+        OPEN_URL_PROOF_TARGETS.deepLink,
+      ),
+      /active session/,
+    );
+  });
+
   it('validates PNG dimensions, checksums, and nonblank decoded pixels', () => {
     const png = pngFixture({ width: 4, height: 3 });
     assert.deepEqual(inspectPng(png), { width: 4, height: 3 });
@@ -412,6 +495,14 @@ function fakeCloud(platform, events, options = {}) {
       result.screenshotSessionId = sessionId;
       return png;
     },
+    async openUrl(sessionId, url) {
+      events.push(`session:open-url:${url}`);
+      return openUrlResponse(platform, url, sessionId);
+    },
+    async tap(sessionId, point, options) {
+      events.push(`session:tap:${point.x},${point.y}:${options.requestId}`);
+      return tapResponse(platform, options.requestId, sessionId);
+    },
     async delete(sessionId) {
       events.push('session:delete');
       result.deletedSessionId = sessionId;
@@ -437,6 +528,40 @@ function fakeCloud(platform, events, options = {}) {
     },
   };
   return result;
+}
+
+function openUrlResponse(platform, url, sessionId = `${platform}-session`) {
+  return {
+    ok: true,
+    platform,
+    sessionId,
+    device: `${platform}-device`,
+    leaseId: `${platform}-lease`,
+    url,
+  };
+}
+
+function proofResults(platform) {
+  return {
+    https: openUrlResponse(platform, OPEN_URL_PROOF_TARGETS.https),
+    deepLink: openUrlResponse(platform, OPEN_URL_PROOF_TARGETS.deepLink),
+  };
+}
+
+function tapResponse(platform, requestId, sessionId = `${platform}-session`) {
+  const now = new Date(0).toISOString();
+  return {
+    ok: true,
+    requestId,
+    sessionId,
+    platform,
+    action: 'tap',
+    status: 'completed',
+    acceptedAt: now,
+    completedAt: now,
+    durationMs: 1,
+    result: { pointCount: 1 },
+  };
 }
 
 function assetResponse(platform) {

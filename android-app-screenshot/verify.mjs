@@ -63,12 +63,43 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(source, /event\.isMetaPressed\(\), "Command"/);
   assert.match(source, /setClickable\(true\)/);
   assert.match(source, /performClick\(\)/);
-  assert.match(readme, /npm run demo -- --json/);
+  assert.match(readme, /npm run demo -- --prove-open-urls --open --json/);
+  assert.match(readme, /--app "\$RUNNER_TEMP\/native-app\/RunCloudProof\.apk"[\s\S]*--prove-open-urls[\s\S]*--json/);
   assert.match(readme, /--ready-timeout-ms NUMBER/);
   assert.match(readme, /cleanup.*session.*released.*asset.*deleted/s);
   assert.match(readme, /tap `0\.50,0\.23`/);
   assert.match(readme, /stays\s+anchored at `0\.50,0\.23` in both portrait and landscape/);
   assert.match(readme, /After a\s+rotation/);
+});
+
+it('registers runcloudproof and visibly preserves cold and warm encoded deep links', async () => {
+  const manifest = await readFile(new URL('./App/AndroidManifest.xml', import.meta.url), 'utf8');
+  const source = await readFile(
+    new URL('./App/cloud/run/examples/screenshot/MainActivity.java', import.meta.url),
+    'utf8',
+  );
+  const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
+  const workflow = await readFile(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
+
+  assert.match(manifest, /android:launchMode="singleTask"/);
+  assert.match(manifest, /android\.intent\.action\.VIEW/);
+  assert.match(manifest, /android\.intent\.category\.BROWSABLE/);
+  assert.match(manifest, /android:scheme="runcloudproof"/);
+  assert.match(source, /showDeepLink\(getIntent\(\), "cold"\)/);
+  assert.match(source, /onNewIntent\(Intent intent\)[\s\S]*showDeepLink\(intent, "warm"\)/);
+  assert.match(source, /status\("", "deep-link-state"\)/);
+  assert.match(source, /uri\.toString\(\)/);
+  assert.match(
+    readme,
+    /runcloudproof:\/\/open\/items%2F42\?message=hello%20world&return=https%3A%2F%2Fexample\.com%2Fdone%3Fx%3D1%26y%3Dtwo#proof/,
+  );
+  assert.match(readme, /same URI byte for byte/);
+  assert.match(readme, /both six-field acknowledgements/);
+  assert.match(readme, /never prints the signed viewer URL/);
+  assert.match(readme, /iOS-only confirmation\s+tap is never sent/);
+  assert.match(readme, /at least five\s+seconds to reach its final state/);
+  assert.match(workflow, /directory: android-app-screenshot/);
+  assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });
 
 it('keeps the normalized tap target centered in portrait and landscape', async () => {

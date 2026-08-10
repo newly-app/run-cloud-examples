@@ -9,15 +9,33 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         let window = UIWindow(frame: UIScreen.main.bounds)
-        window.rootViewController = ProofViewController()
+        let proofViewController = ProofViewController()
+        window.rootViewController = proofViewController
         window.makeKeyAndVisible()
         self.window = window
+        if let url = launchOptions?[.url] as? URL {
+            proofViewController.showDeepLink(url, delivery: "cold")
+        }
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        guard url.scheme?.lowercased() == "runcloudproof" else { return false }
+        guard let proofViewController = window?.rootViewController as? ProofViewController else {
+            return false
+        }
+        proofViewController.showDeepLink(url, delivery: "warm")
         return true
     }
 }
 
 final class ProofViewController: UIViewController, UITextFieldDelegate, UIScrollViewDelegate {
     private let gradient = CAGradientLayer()
+    private let deepLinkState = ProofViewController.deepLinkStatus()
     private let tapState = ProofViewController.status("Tap count: 0", id: "tap-state")
     private let swipeState = ProofViewController.status("Swipe: idle", id: "swipe-state")
     private let gestureState = ProofViewController.status("Gesture: idle", id: "gesture-state")
@@ -127,6 +145,7 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         page.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(page)
         page.addSubview(content)
+        view.addSubview(deepLinkState)
 
         NSLayoutConstraint.activate([
             page.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
@@ -138,7 +157,16 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
             content.topAnchor.constraint(equalTo: page.contentLayoutGuide.topAnchor, constant: 14),
             content.bottomAnchor.constraint(equalTo: page.contentLayoutGuide.bottomAnchor, constant: -12),
             content.widthAnchor.constraint(equalTo: page.frameLayoutGuide.widthAnchor, constant: -48),
+            deepLinkState.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            deepLinkState.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            deepLinkState.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
         ])
+    }
+
+    func showDeepLink(_ url: URL, delivery: String) {
+        deepLinkState.text = "Deep link (\(delivery)):\n\(url.absoluteString)"
+        deepLinkState.accessibilityValue = url.absoluteString
+        deepLinkState.isHidden = false
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -421,6 +449,21 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         label.font = .monospacedSystemFont(ofSize: 13, weight: .medium)
         label.textColor = UIColor(red: 0.78, green: 0.86, blue: 0.90, alpha: 1)
         label.accessibilityIdentifier = id
+        return label
+    }
+
+    private static func deepLinkStatus() -> UILabel {
+        let label = status("", id: "deep-link-state")
+        label.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        label.backgroundColor = UIColor(red: 0.02, green: 0.12, blue: 0.16, alpha: 0.96)
+        label.layer.cornerRadius = 10
+        label.layer.borderColor = UIColor(red: 0.46, green: 0.91, blue: 0.98, alpha: 0.8).cgColor
+        label.layer.borderWidth = 1
+        label.layer.masksToBounds = true
+        label.lineBreakMode = .byCharWrapping
+        label.numberOfLines = 0
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }
 }
