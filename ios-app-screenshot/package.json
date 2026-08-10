@@ -9,7 +9,7 @@
     "test": "node --test verify.mjs"
   },
   "dependencies": {
-    "@run-cloud/sdk": "0.13.0"
+    "@run-cloud/sdk": "0.19.0"
   },
   "engines": {
     "node": ">=20"
