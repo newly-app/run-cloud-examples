@@ -40,7 +40,18 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
     private let swipeState = ProofViewController.status("Swipe: idle", id: "swipe-state")
     private let gestureState = ProofViewController.status("Gesture: idle", id: "gesture-state")
     private let keyState = ProofViewController.status("Key: none", id: "key-state")
+    private let accessibilityState = ProofViewController.status(
+        "Notifications: off · Screen: overview",
+        id: "accessibility-state"
+    )
+    private let accessibilityNestedLabel = ProofViewController.status(
+        "Nested label: overview",
+        id: "nested-label"
+    )
+    private let notificationsToggle = UISwitch()
+    private let navigationButton = UIButton(type: .system)
     private var tapCount = 0
+    private var showingAccessibilityDetails = false
 
     override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
     override var canBecomeFirstResponder: Bool { true }
@@ -113,6 +124,8 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         let scrollView = makeScrollProof()
         scrollView.heightAnchor.constraint(equalToConstant: 190).isActive = true
 
+        let accessibilityProof = makeAccessibilityProof()
+
         let content = UIStackView(arrangedSubviews: [
             mark,
             stateColumn,
@@ -120,6 +133,7 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
             textInput,
             gestureArea,
             scrollView,
+            accessibilityProof,
         ])
         content.axis = .vertical
         content.spacing = 9
@@ -193,6 +207,30 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         tapState.text = "Tap count: \(tapCount)"
     }
 
+    @objc private func notificationsChanged() {
+        updateAccessibilityState()
+    }
+
+    @objc private func navigateAccessibilityProof() {
+        showingAccessibilityDetails.toggle()
+        accessibilityNestedLabel.text = showingAccessibilityDetails
+            ? "Nested label: details"
+            : "Nested label: overview"
+        navigationButton.setTitle(
+            showingAccessibilityDetails ? "BACK TO OVERVIEW" : "OPEN DETAILS",
+            for: .normal
+        )
+        navigationButton.accessibilityLabel = showingAccessibilityDetails
+            ? "Back to overview"
+            : "Open details"
+        updateAccessibilityState()
+    }
+
+    private func updateAccessibilityState() {
+        accessibilityState.text = "Notifications: \(notificationsToggle.isOn ? "on" : "off")"
+            + " · Screen: \(showingAccessibilityDetails ? "details" : "overview")"
+    }
+
     @objc private func keyPressed(_ sender: UIKeyCommand) {
         let input = sender.discoverabilityTitle ?? readableKey(sender.input ?? "unknown")
         showKey(readableKey(input, modifiers: sender.modifierFlags))
@@ -259,6 +297,117 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
             cards.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor, constant: -24),
         ])
         return scroll
+    }
+
+    private func makeAccessibilityProof() -> UIView {
+        let heading = label("ACCESSIBILITY PROOF", size: 15, weight: .bold)
+        heading.font = .monospacedSystemFont(ofSize: 15, weight: .bold)
+        heading.textColor = UIColor(red: 0.55, green: 0.93, blue: 0.57, alpha: 1)
+        heading.accessibilityIdentifier = "accessibility-heading"
+        heading.accessibilityTraits.insert(.header)
+
+        let name = proofTextField(
+            placeholder: "Name",
+            id: "name-field",
+            label: "Name",
+            value: "Ada"
+        )
+        let password = proofTextField(
+            placeholder: "Password",
+            id: "password-field",
+            label: "Password",
+            value: "runcloud-secret-42"
+        )
+        password.isSecureTextEntry = true
+
+        let toggleLabel = label("Notifications", size: 14, weight: .medium)
+        toggleLabel.accessibilityIdentifier = "notifications-label"
+        notificationsToggle.accessibilityIdentifier = "notifications-toggle"
+        notificationsToggle.accessibilityLabel = "Notifications"
+        notificationsToggle.isOn = false
+        notificationsToggle.addTarget(
+            self,
+            action: #selector(notificationsChanged),
+            for: .valueChanged
+        )
+        let toggleRow = UIStackView(arrangedSubviews: [toggleLabel, notificationsToggle])
+        toggleRow.axis = .horizontal
+        toggleRow.alignment = .center
+        toggleRow.distribution = .equalSpacing
+
+        let disabled = UIButton(type: .system)
+        disabled.setTitle("SUBMIT DISABLED", for: .normal)
+        disabled.accessibilityIdentifier = "disabled-submit"
+        disabled.accessibilityLabel = "Submit"
+        disabled.isEnabled = false
+
+        navigationButton.setTitle("OPEN DETAILS", for: .normal)
+        navigationButton.accessibilityIdentifier = "navigate-button"
+        navigationButton.accessibilityLabel = "Open details"
+        navigationButton.addTarget(
+            self,
+            action: #selector(navigateAccessibilityProof),
+            for: .touchUpInside
+        )
+        let buttons = UIStackView(arrangedSubviews: [disabled, navigationButton])
+        buttons.axis = .horizontal
+        buttons.distribution = .fillEqually
+        buttons.spacing = 8
+        buttons.heightAnchor.constraint(equalToConstant: 42).isActive = true
+
+        let stack = UIStackView(arrangedSubviews: [
+            heading,
+            accessibilityNestedLabel,
+            accessibilityState,
+            name,
+            password,
+            toggleRow,
+            buttons,
+        ])
+        stack.axis = .vertical
+        stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.accessibilityContainerType = .semanticGroup
+
+        let card = UIView()
+        card.accessibilityIdentifier = "accessibility-card"
+        card.backgroundColor = UIColor.white.withAlphaComponent(0.07)
+        card.layer.cornerRadius = 12
+        card.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
+        card.layer.borderWidth = 1
+        card.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -14),
+        ])
+        return card
+    }
+
+    private func proofTextField(
+        placeholder: String,
+        id: String,
+        label: String,
+        value: String
+    ) -> UITextField {
+        let field = UITextField()
+        field.placeholder = placeholder
+        field.accessibilityIdentifier = id
+        field.accessibilityLabel = label
+        field.text = value
+        field.textColor = .white
+        field.tintColor = UIColor(red: 0.46, green: 0.91, blue: 0.98, alpha: 1)
+        field.backgroundColor = UIColor.white.withAlphaComponent(0.09)
+        field.layer.cornerRadius = 9
+        field.layer.borderColor = UIColor.white.withAlphaComponent(0.22).cgColor
+        field.layer.borderWidth = 1
+        field.autocorrectionType = .no
+        field.autocapitalizationType = .none
+        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 1))
+        field.leftViewMode = .always
+        field.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        return field
     }
 
     private func scrollCard(_ title: String, detail: String) -> UIView {

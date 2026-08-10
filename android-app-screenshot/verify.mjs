@@ -41,6 +41,15 @@ it('builds a launchable native APK with standard Android SDK tools', async () =>
   assert.match(source, /setContentDescription\("text-input"\)/);
   assert.match(source, /setContentDescription\("gesture-area"\)/);
   assert.match(source, /setContentDescription\("swipe-scroll"\)/);
+  assert.match(source, /setAccessibilityPaneTitle\("Accessibility proof group"\)/);
+  assert.match(source, /setAccessibilityHeading\(true\)/);
+  assert.match(source, /"Nested label: overview"/);
+  assert.match(source, /accessibilityField\("Name", "Ada", false\)/);
+  assert.match(source, /accessibilityField\("Password", "runcloud-secret-42", true\)/);
+  assert.match(source, /TYPE_TEXT_VARIATION_PASSWORD/);
+  assert.match(source, /notificationsToggle = new Switch/);
+  assert.match(source, /disabled\.setEnabled\(false\)/);
+  assert.match(source, /navigationButton\.setContentDescription\("Open details"\)/);
   assert.match(source, /dispatchKeyEvent/);
   assert.match(source, /TAP_TARGET_NORMALIZED_Y = 0\.23f/);
   assert.match(source, /page\.addView\(content/);

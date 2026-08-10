@@ -158,3 +158,10 @@ Visible state has identifiers `tap-state`, `swipe-state`, `gesture-state`, and
 the last received key with Control, Option, Shift, or Command modifiers. Prefer
 accessibility identifiers when the driver exposes them; the coordinates are
 stable anchors for normalized input APIs.
+
+The final card is an accessibility-testing fixture. It contains a heading,
+nested status labels, an editable name field, a prefilled secure password
+field, a notifications switch, a disabled submit button, and a navigation
+button. Reading the hierarchy after scrolling to the card can verify roles,
+labels, bounds, identifiers, nesting, disabled state, secure-value redaction,
+and fresh switch or navigation state.

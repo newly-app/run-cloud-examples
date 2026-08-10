@@ -29,6 +29,17 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /id: "swipe-state"/);
   assert.match(source, /id: "gesture-state"/);
   assert.match(source, /id: "key-state"/);
+  assert.match(source, /accessibilityIdentifier = "accessibility-heading"/);
+  assert.match(source, /id: "nested-label"/);
+  assert.match(source, /id: "name-field"/);
+  assert.match(source, /id: "password-field"/);
+  assert.match(source, /value: "runcloud-secret-42"/);
+  assert.match(source, /password\.isSecureTextEntry = true/);
+  assert.match(source, /accessibilityIdentifier = "notifications-toggle"/);
+  assert.match(source, /accessibilityIdentifier = "disabled-submit"/);
+  assert.match(source, /disabled\.isEnabled = false/);
+  assert.match(source, /accessibilityIdentifier = "navigate-button"/);
+  assert.match(source, /accessibilityContainerType = \.semanticGroup/);
   assert.match(source, /override var keyCommands/);
   assert.match(source, /let page = UIScrollView\(\)/);
   assert.match(source, /page\.contentLayoutGuide/);
