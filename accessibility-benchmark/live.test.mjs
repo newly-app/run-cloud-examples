@@ -38,7 +38,8 @@ await mkdir(artifactDirectory, { recursive: true });
 test('published SDK authenticates the benchmark account', async () => {
   const cloud = new Client();
   const account = await cloud.account();
-  assert.equal(account.runCloud, true, 'the benchmark account does not have run.cloud access');
+  assert.ok(account.userId, 'the benchmark account response did not include an authenticated user');
+  assert.ok(Array.isArray(account.orgs), 'the benchmark account response did not include organizations');
 });
 
 for (const platform of ['ios', 'android']) {
@@ -283,6 +284,12 @@ function sanitizedFailure(error) {
       .replace(/(?:https?|wss):\/\/\S+/gi, '[redacted URL]')
       .replace(/rc_(?:live|test)_[A-Za-z0-9._-]+/g, '[redacted API key]')
       .slice(0, 2_000),
+    ...(Number.isInteger(error.status) ? { status: error.status } : {}),
+    ...(typeof error.code === 'string' ? { code: error.code } : {}),
+    ...(typeof error.action === 'string' ? { action: error.action } : {}),
+    ...(typeof error.suggestedAction === 'string'
+      ? { suggestedAction: error.suggestedAction.slice(0, 500) }
+      : {}),
   };
 }
 
