@@ -115,8 +115,9 @@ npm ci
 npm test
 ```
 
-The manual GitHub Actions live job builds both native apps, then runs their
-published-SDK accessibility benchmark inside a short-lived run.cloud sandbox.
+The existing `Test examples` GitHub Actions workflow builds both native apps,
+then runs their published-SDK accessibility benchmarks from its `live` iOS and
+Android matrix jobs using the workflow's protected `live` environment.
 To run either screenshot example directly:
 
 ```bash
@@ -128,9 +129,10 @@ npm run demo -- --prove-open-urls --open --json
 The live workflow is opt-in so normal pull requests never create paid sessions.
 Every pull request still builds the native fixtures and publishes them as the
 `run-cloud-parity-ios-app` and `run-cloud-parity-android-app` workflow artifacts.
-On manual live dispatch, the Actions controller downloads those exact artifacts,
-runs the test on a run.cloud runner, uploads TAP, JSON-tree, PNG, runner-identity,
-and cleanup evidence, then repeats run-scoped cleanup in an `always()` step.
+On manual live dispatch, each matrix job downloads its exact build artifact,
+creates a real run.cloud session, and always uploads TAP, JSON-tree, PNG,
+Actions-runner identity, failure, and cleanup evidence. The test releases its
+session and deletes its uploaded app before returning success or failure.
 
 ## Agent skills
 

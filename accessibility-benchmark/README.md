@@ -65,9 +65,14 @@ export RUN_CLOUD_BENCHMARK_ARTIFACT_DIR="./artifacts"
 npm run test:live
 ```
 
+Set `RUN_CLOUD_BENCHMARK_PLATFORM=ios` or `android` and
+`RUN_CLOUD_BENCHMARK_APP=/absolute/path/to/the/app` to run one platform, as the
+repository's existing `Test examples` live matrix does.
+
 The suite creates one platform session at a time, uploads and installs the
 matching app, writes the initial and post-interaction trees plus PNG screenshots,
 and releases the session before deleting its asset. Every session has a
 three-minute inactivity timeout and ten-minute hard timeout. Failure artifacts
 contain sanitized errors, while cleanup artifacts record the session and asset
-outcomes without signed viewer URLs or credentials.
+outcomes without signed viewer URLs or credentials. CI artifacts also include
+the GitHub Actions runner identity, public SDK version, and native-app checksum.

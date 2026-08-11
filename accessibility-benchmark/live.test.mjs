@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -16,12 +17,18 @@ import {
 const READY_TIMEOUT_MS = 180_000;
 const TREE_RETRY_ATTEMPTS = 16;
 const TREE_RETRY_DELAY_MS = 350;
+const PUBLIC_SDK_VERSION = '0.22.0';
 const benchmarkRun = safeRunId(requiredEnvironment('RUN_CLOUD_BENCHMARK_RUN_ID'));
 const artifactDirectory = resolve(requiredEnvironment('RUN_CLOUD_BENCHMARK_ARTIFACT_DIR'));
-const appPaths = {
-  ios: resolve(requiredEnvironment('RUN_CLOUD_BENCHMARK_IOS_APP')),
-  android: resolve(requiredEnvironment('RUN_CLOUD_BENCHMARK_ANDROID_APP')),
-};
+const requestedPlatform = benchmarkPlatform(process.env.RUN_CLOUD_BENCHMARK_PLATFORM);
+const platforms = requestedPlatform ? [requestedPlatform] : ['ios', 'android'];
+const appPaths = Object.fromEntries(platforms.map((platform) => [
+  platform,
+  resolve(
+    process.env.RUN_CLOUD_BENCHMARK_APP?.trim()
+      || requiredEnvironment(`RUN_CLOUD_BENCHMARK_${platform.toUpperCase()}_APP`),
+  ),
+]));
 const fixtures = {
   ios: {
     filename: 'RunCloudProof.app.tar.gz',
@@ -42,7 +49,7 @@ test('published SDK authenticates the benchmark account', async () => {
   assert.ok(Array.isArray(account.orgs), 'the benchmark account response did not include organizations');
 });
 
-for (const platform of ['ios', 'android']) {
+for (const platform of platforms) {
   test(
     `${platform} returns and updates the documented native accessibility hierarchy`,
     { timeout: 12 * 60_000, concurrency: false },
@@ -70,6 +77,30 @@ async function runPlatformBenchmark(platform, signal) {
   try {
     throwIfAborted(signal);
     const app = await readFile(appPaths[platform]);
+    await writeJson(`${platform}-runner.json`, {
+      schemaVersion: 1,
+      platform,
+      benchmarkRun,
+      runner: {
+        kind: process.env.GITHUB_ACTIONS === 'true' ? 'GitHub Actions' : 'local',
+        name: process.env.RUNNER_NAME ?? null,
+        os: process.env.RUNNER_OS ?? process.platform,
+        arch: process.env.RUNNER_ARCH ?? process.arch,
+        imageOs: process.env.ImageOS ?? null,
+        imageVersion: process.env.ImageVersion ?? null,
+      },
+      github: {
+        repository: process.env.GITHUB_REPOSITORY ?? null,
+        runId: process.env.GITHUB_RUN_ID ?? null,
+        runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+        job: process.env.GITHUB_JOB ?? null,
+      },
+      publicSdk: {
+        package: '@run-cloud/sdk',
+        version: PUBLIC_SDK_VERSION,
+      },
+      appSha256: createHash('sha256').update(app).digest('hex'),
+    });
     asset = await cloud.assets.upload(new Blob([app], { type: fixture.contentType }), {
       name: `accessibility-benchmark-${benchmarkRun}-${platform}`,
       filename: fixture.filename,
@@ -275,6 +306,13 @@ function safeRunId(value) {
   const result = value.replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 64);
   if (!result) throw new Error('RUN_CLOUD_BENCHMARK_RUN_ID has no usable characters');
   return result;
+}
+
+function benchmarkPlatform(value) {
+  const platform = value?.trim().toLowerCase();
+  if (!platform) return null;
+  if (platform === 'ios' || platform === 'android') return platform;
+  throw new Error('RUN_CLOUD_BENCHMARK_PLATFORM must be ios or android');
 }
 
 function sanitizedFailure(error) {

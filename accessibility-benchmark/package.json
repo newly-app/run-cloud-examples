@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test contract.test.mjs ../scripts/runcloud-accessibility-runner.test.mjs",
+    "test": "node --test contract.test.mjs",
     "test:live": "node --test --test-reporter=tap live.test.mjs"
   },
   "dependencies": {
