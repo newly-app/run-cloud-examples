@@ -109,8 +109,8 @@ confirmation even after the URL operation succeeds. The demo waits for that
 prompt for at least five seconds, confirms its **Open** button with an
 authenticated SDK tap, then waits at least five more seconds for the proof app
 to render before capture. If the prompt was already accepted, the same tap is
-harmless on this fixture. The repository's live workflow invokes the same proof
-against its CI-built app:
+harmless on this fixture. To run the same URL proof against a CI-built or local
+archive, pass it explicitly:
 
 ```bash
 npm run demo -- \
@@ -161,9 +161,10 @@ the last received key with Control, Option, Shift, or Command modifiers. Prefer
 accessibility identifiers when the driver exposes them; the coordinates are
 stable anchors for normalized input APIs.
 
-The final card is an accessibility-testing fixture. It contains a heading,
-nested status labels, an editable name field, a prefilled secure password
-field, a notifications switch, a disabled submit button, and a navigation
-button. Reading the hierarchy after scrolling to the card can verify roles,
-labels, bounds, identifiers, nesting, disabled state, secure-value redaction,
-and fresh switch or navigation state.
+The final card is the maintained iOS app for the
+[native accessibility benchmark](../accessibility-benchmark/README.md). Its
+versioned contract records every label, identifier, role, value, hierarchy
+rule, and state transition. The live public-SDK test scrolls the card into view,
+checks that the secure value is redacted, taps `Notifications`, taps
+`Open details`, and preserves the initial and updated trees as Actions
+artifacts.

@@ -21,6 +21,18 @@ npm run demo -- --platform both --open
 See [sdk-ios-android/README.md](sdk-ios-android/README.md) for platform, codec,
 duration, JSON-output, and cleanup options.
 
+## Native accessibility benchmark
+
+The maintained Swift and Java apps double as deterministic accessibility
+benchmarks. A versioned contract documents their labels, roles, hierarchy,
+values, secure-field redaction, and initial and post-interaction states. The
+published-SDK suite installs both CI-built apps into real run.cloud sessions,
+reads each native accessibility tree, taps controls by returned bounds, and
+captures the resulting trees and screenshots.
+
+See [accessibility-benchmark/README.md](accessibility-benchmark/README.md) for
+the exact contract and live command.
+
 ## Examples
 
 ### Real iOS app screenshot
@@ -103,9 +115,9 @@ npm ci
 npm test
 ```
 
-The manual GitHub Actions live matrix builds and executes both native screenshot
-examples against production, including both URL-opening targets. To run either
-example directly:
+The manual GitHub Actions live job builds both native apps, then runs their
+published-SDK accessibility benchmark inside a short-lived run.cloud sandbox.
+To run either screenshot example directly:
 
 ```bash
 cd ios-app-screenshot # or android-app-screenshot
@@ -116,7 +128,9 @@ npm run demo -- --prove-open-urls --open --json
 The live workflow is opt-in so normal pull requests never create paid sessions.
 Every pull request still builds the native fixtures and publishes them as the
 `run-cloud-parity-ios-app` and `run-cloud-parity-android-app` workflow artifacts.
-The live matrix downloads those artifacts before it creates a session.
+On manual live dispatch, the Actions controller downloads those exact artifacts,
+runs the test on a run.cloud runner, uploads TAP, JSON-tree, PNG, runner-identity,
+and cleanup evidence, then repeats run-scoped cleanup in an `always()` step.
 
 ## Agent skills
 

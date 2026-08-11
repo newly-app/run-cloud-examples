@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "name": "run.cloud native accessibility benchmark",
+  "source": {
+    "license": "MIT",
+    "ios": {
+      "directory": "ios-app-screenshot",
+      "language": "Swift",
+      "artifact": "RunCloudProof.app.tar.gz"
+    },
+    "android": {
+      "directory": "android-app-screenshot",
+      "language": "Java",
+      "artifact": "RunCloudProof.apk"
+    }
+  },
+  "forbiddenAccessibleText": "runcloud-secret-42",
+  "hierarchy": {
+    "depthFirstOrder": [
+      "heading",
+      "nestedLabel",
+      "status",
+      "name",
+      "password",
+      "toggle",
+      "disabled",
+      "navigate"
+    ],
+    "iosApplicationRoot": true,
+    "androidMinimumPathSegments": 3
+  },
+  "nodes": {
+    "heading": {
+      "labels": ["ACCESSIBILITY PROOF"],
+      "roles": {
+        "ios": ["heading"],
+        "android": ["heading", "text"]
+      },
+      "iosIdentifier": "accessibility-heading"
+    },
+    "nestedLabel": {
+      "labels": ["Nested label: overview", "Nested label: details"],
+      "roles": {
+        "ios": ["text"],
+        "android": ["text"]
+      },
+      "iosIdentifier": "nested-label"
+    },
+    "status": {
+      "labels": [
+        "Notifications: off · Screen: overview",
+        "Notifications: on · Screen: overview",
+        "Notifications: on · Screen: details"
+      ],
+      "roles": {
+        "ios": ["text"],
+        "android": ["text"]
+      },
+      "iosIdentifier": "accessibility-state"
+    },
+    "name": {
+      "labels": ["Name"],
+      "roles": {
+        "ios": ["text-field"],
+        "android": ["text-field"]
+      },
+      "iosIdentifier": "name-field",
+      "value": "Ada",
+      "editable": true,
+      "secure": false
+    },
+    "password": {
+      "labels": ["Password"],
+      "roles": {
+        "ios": ["text-field"],
+        "android": ["text-field"]
+      },
+      "iosIdentifier": "password-field",
+      "value": null,
+      "editable": true,
+      "secure": true
+    },
+    "toggle": {
+      "labels": ["Notifications"],
+      "roles": {
+        "ios": ["switch"],
+        "android": ["switch"]
+      },
+      "iosIdentifier": "notifications-toggle",
+      "androidClassContains": "switch"
+    },
+    "disabled": {
+      "labels": ["Submit"],
+      "roles": {
+        "ios": ["button"],
+        "android": ["button"]
+      },
+      "iosIdentifier": "disabled-submit",
+      "enabled": false
+    },
+    "navigate": {
+      "labels": ["Open details", "Back to overview"],
+      "roles": {
+        "ios": ["button"],
+        "android": ["button"]
+      },
+      "iosIdentifier": "navigate-button",
+      "enabled": true
+    }
+  },
+  "states": {
+    "initial": {
+      "nestedLabel": "Nested label: overview",
+      "status": "Notifications: off · Screen: overview",
+      "toggleChecked": false,
+      "navigationLabel": "Open details"
+    },
+    "notificationsOn": {
+      "nestedLabel": "Nested label: overview",
+      "status": "Notifications: on · Screen: overview",
+      "toggleChecked": true,
+      "navigationLabel": "Open details"
+    },
+    "details": {
+      "nestedLabel": "Nested label: details",
+      "status": "Notifications: on · Screen: details",
+      "toggleChecked": true,
+      "navigationLabel": "Back to overview"
+    }
+  }
+}

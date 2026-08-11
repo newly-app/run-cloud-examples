@@ -79,7 +79,6 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
     'utf8',
   );
   const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
-  const workflow = await readFile(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
 
   assert.match(manifest, /android:launchMode="singleTask"/);
   assert.match(manifest, /android\.intent\.action\.VIEW/);
@@ -98,8 +97,6 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
   assert.match(readme, /never prints the signed viewer URL/);
   assert.match(readme, /iOS-only confirmation\s+tap is never sent/);
   assert.match(readme, /at least five\s+seconds to reach its final state/);
-  assert.match(workflow, /directory: android-app-screenshot/);
-  assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });
 
 it('keeps the normalized tap target centered in portrait and landscape', async () => {
