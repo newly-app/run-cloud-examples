@@ -108,8 +108,8 @@ then the deep link. It verifies both six-field acknowledgements, captures the
 app overlay after the deep link, and never prints the signed viewer URL.
 Android resolves the registered activity directly; the iOS-only confirmation
 tap is never sent to this emulator. URL proof allows each target at least five
-seconds to reach its final state. The repository's live workflow invokes the
-same proof against its CI-built app:
+seconds to reach its final state. To run the same URL proof against a CI-built
+or local APK, pass it explicitly:
 
 ```bash
 npm run demo -- \
@@ -162,9 +162,9 @@ the text keyboard.
 Prefer accessibility descriptions when the driver exposes them; the coordinates
 are stable anchors for normalized input APIs.
 
-The final card is an accessibility-testing fixture. It contains a heading,
-nested status labels, an editable name field, a prefilled secure password
-field, a notifications switch, a disabled submit button, and a navigation
-button. Reading the hierarchy after scrolling to the card can verify roles,
-labels, pixel bounds, nesting, disabled state, secure-value redaction, and fresh
-switch or navigation state.
+The final card is the maintained Android app for the
+[native accessibility benchmark](../accessibility-benchmark/README.md). Its
+versioned contract records every label, role, value, hierarchy rule, and state
+transition. The live public-SDK test scrolls the card into view, checks that the
+secure value is redacted, taps `Notifications`, taps `Open details`, and
+preserves the initial and updated trees as Actions artifacts.

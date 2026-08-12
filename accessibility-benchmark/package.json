@@ -1,0 +1,16 @@
+{
+  "name": "run-cloud-native-accessibility-benchmark",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test contract.test.mjs",
+    "test:live": "node --test --test-reporter=tap live.test.mjs"
+  },
+  "dependencies": {
+    "@run-cloud/sdk": "0.22.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

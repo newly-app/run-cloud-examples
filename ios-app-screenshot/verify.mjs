@@ -57,7 +57,6 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
   const source = await readFile(new URL('./App/AppDelegate.swift', import.meta.url), 'utf8');
   const plist = await readFile(new URL('./App/Info.plist', import.meta.url), 'utf8');
   const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
-  const workflow = await readFile(new URL('../.github/workflows/test.yml', import.meta.url), 'utf8');
 
   assert.match(plist, /CFBundleURLSchemes[\s\S]*<string>runcloudproof<\/string>/);
   assert.match(source, /launchOptions\?\[\.url\][\s\S]*delivery: "cold"/);
@@ -75,6 +74,4 @@ it('registers runcloudproof and visibly preserves cold and warm encoded deep lin
   assert.match(readme, /Open in Run Cloud Proof/);
   assert.match(readme, /authenticated SDK tap/);
   assert.match(readme, /at least five seconds[\s\S]*at least five more seconds/);
-  assert.match(workflow, /directory: ios-app-screenshot/);
-  assert.match(workflow, /npm run demo --[\s\S]*--app "\$RUNNER_TEMP\/native-app\/\$\{\{ matrix\.artifact-file \}\}"[\s\S]*--prove-open-urls[\s\S]*--json/);
 });

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: Build and execute both metered screenshot examples
+        description: Run both metered native accessibility benchmarks on run.cloud
         required: true
         default: false
         type: boolean
@@ -32,6 +32,7 @@ jobs:
             sdk-ios-android/package-lock.json
             ios-app-screenshot/package-lock.json
             android-app-screenshot/package-lock.json
+            accessibility-benchmark/package-lock.json
             live-camera-relay/package-lock.json
 
       - name: Install published-package test dependencies
@@ -48,6 +49,10 @@ jobs:
 
       - name: Install Android screenshot dependencies
         working-directory: android-app-screenshot
+        run: npm ci
+
+      - name: Install accessibility benchmark dependencies
+        working-directory: accessibility-benchmark
         run: npm ci
 
       - name: Install camera example dependencies
@@ -70,6 +75,10 @@ jobs:
         working-directory: android-app-screenshot
         run: npm test
 
+      - name: Test native accessibility benchmark contracts
+        working-directory: accessibility-benchmark
+        run: npm test
+
       - name: Test mosaic example
         working-directory: eight-device-mosaic
         run: npm test
@@ -83,7 +92,7 @@ jobs:
         run: npm run typecheck
 
   native-app-build:
-    name: Build ${{ matrix.platform }} sample app
+    name: Build ${{ matrix.platform }} benchmark app
     strategy:
       fail-fast: false
       matrix:
@@ -120,13 +129,14 @@ jobs:
           if-no-files-found: error
 
   live:
-    name: Live ${{ matrix.platform }} screenshot
+    name: Live ${{ matrix.platform }} accessibility benchmark on run.cloud
     if: >-
       github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' &&
       inputs.live == true
     needs: [test, native-app-build]
-    timeout-minutes: 10
+    permissions:
+      contents: read
+    timeout-minutes: 20
     environment: live
     strategy:
       fail-fast: false
@@ -134,28 +144,31 @@ jobs:
         include:
           - platform: ios
             runner: macos-14
-            directory: ios-app-screenshot
             artifact: run-cloud-parity-ios-app
             artifact-file: RunCloudProof.app.tar.gz
           - platform: android
             runner: ubuntu-latest
-            directory: android-app-screenshot
             artifact: run-cloud-parity-android-app
             artifact-file: RunCloudProof.apk
     runs-on: ${{ matrix.runner }}
+    concurrency:
+      group: run-cloud-accessibility-benchmark-${{ matrix.platform }}
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+          cache-dependency-path: accessibility-benchmark/package-lock.json
 
-      - name: Install published SDK
-        working-directory: ${{ matrix.directory }}
+      - name: Install pinned public run.cloud SDK
+        working-directory: accessibility-benchmark
         run: npm ci
 
       - name: Download CI-built native app
@@ -164,35 +177,48 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ runner.temp }}/native-app
 
+      - name: Prepare benchmark evidence
+        run: |
+          set -euo pipefail
+          results_dir="$RUNNER_TEMP/run-cloud-accessibility-${{ matrix.platform }}"
+          mkdir -p "$results_dir"
+          {
+            echo "RUN_CLOUD_BENCHMARK_PLATFORM=${{ matrix.platform }}"
+            echo "RUN_CLOUD_BENCHMARK_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.platform }}"
+            echo "RUN_CLOUD_BENCHMARK_APP=$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
+            echo "RUN_CLOUD_BENCHMARK_ARTIFACT_DIR=$results_dir"
+          } >> "$GITHUB_ENV"
+
       - name: Validate live run.cloud configuration
         env:
           RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
           RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
         run: |
-          if [ -z "$RUN_CLOUD_API_KEY" ]; then
+          set -euo pipefail
+          if [ -z "${RUN_CLOUD_API_KEY:-}" ]; then
             echo "::error::The live environment is missing RUN_CLOUD_API_KEY."
             exit 1
           fi
-          if [ -z "$RUN_CLOUD_API_URL" ]; then
+          if [ -z "${RUN_CLOUD_API_URL:-}" ]; then
             echo "::error::The live environment is missing RUN_CLOUD_API_URL."
             exit 1
           fi
+          test -f "$RUN_CLOUD_BENCHMARK_APP"
 
-      - name: Upload and capture the CI-built native app
-        working-directory: ${{ matrix.directory }}
+      - name: Run published-SDK accessibility benchmark
+        working-directory: accessibility-benchmark
         env:
           RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
           RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
-        run: >-
-          npm run demo --
-          --app "$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
-          --output "$RUNNER_TEMP/${{ matrix.platform }}-run-cloud-proof.png"
-          --prove-open-urls
-          --json
+        run: |
+          set -o pipefail
+          npm run test:live 2>&1 | tee "$RUN_CLOUD_BENCHMARK_ARTIFACT_DIR/test-report.tap"
 
-      - name: Upload screenshot proof
+      - name: Upload accessibility benchmark evidence
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-run-cloud-proof
-          path: ${{ runner.temp }}/${{ matrix.platform }}-run-cloud-proof.png
+          name: ${{ matrix.platform }}-run-cloud-accessibility-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/run-cloud-accessibility-${{ matrix.platform }}
           if-no-files-found: error
+          retention-days: 14
