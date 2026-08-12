@@ -22,11 +22,16 @@ const benchmarkRun = safeRunId(requiredEnvironment('RUN_CLOUD_BENCHMARK_RUN_ID')
 const artifactDirectory = resolve(requiredEnvironment('RUN_CLOUD_BENCHMARK_ARTIFACT_DIR'));
 const requestedPlatform = benchmarkPlatform(process.env.RUN_CLOUD_BENCHMARK_PLATFORM);
 const platforms = requestedPlatform ? [requestedPlatform] : ['ios', 'android'];
+const explicitApp = process.env.RUN_CLOUD_BENCHMARK_APP?.trim();
+if (explicitApp && !requestedPlatform) {
+  throw new Error(
+    'RUN_CLOUD_BENCHMARK_APP requires RUN_CLOUD_BENCHMARK_PLATFORM to select one platform',
+  );
+}
 const appPaths = Object.fromEntries(platforms.map((platform) => [
   platform,
   resolve(
-    process.env.RUN_CLOUD_BENCHMARK_APP?.trim()
-      || requiredEnvironment(`RUN_CLOUD_BENCHMARK_${platform.toUpperCase()}_APP`),
+    explicitApp || requiredEnvironment(`RUN_CLOUD_BENCHMARK_${platform.toUpperCase()}_APP`),
   ),
 ]));
 const fixtures = {
@@ -271,9 +276,14 @@ async function waitForTreeState(simulator, platform, sessionId, stateName, signa
     ) return lastTree;
     await wait(TREE_RETRY_DELAY_MS, signal);
   }
-  const lastStatus = lastTree
-    ? requireBenchmarkNode(lastTree, platform, 'status').label
-    : 'tree unavailable';
+  let lastStatus = 'tree unavailable';
+  if (lastTree) {
+    try {
+      lastStatus = requireBenchmarkNode(lastTree, platform, 'status').label;
+    } catch (error) {
+      lastStatus = `status unavailable (${asError(error).message})`;
+    }
+  }
   throw new Error(`${platform} did not reach ${stateName}; last status: ${lastStatus}`);
 }
 

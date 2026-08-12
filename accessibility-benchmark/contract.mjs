@@ -19,9 +19,12 @@ export function flattenAccessibilityTree(tree) {
 }
 
 export function findBenchmarkNode(tree, platform, name) {
+  return findBenchmarkNodeInNodes(flattenAccessibilityTree(tree), platform, name);
+}
+
+function findBenchmarkNodeInNodes(nodes, platform, name) {
   const expected = benchmarkContract.nodes[name];
   assert.ok(expected, `unknown benchmark node ${name}`);
-  const nodes = flattenAccessibilityTree(tree);
 
   if (platform === 'ios' && expected.iosIdentifier) {
     return nodes.find((node) => node.identifier === expected.iosIdentifier);
@@ -35,8 +38,9 @@ export function findBenchmarkNode(tree, platform, name) {
   return nodes.find((node) => expected.labels.includes(node.label));
 }
 
-export function requireBenchmarkNode(tree, platform, name) {
-  const node = findBenchmarkNode(tree, platform, name);
+export function requireBenchmarkNode(tree, platform, name, flattenedTree) {
+  const nodes = flattenedTree ?? flattenAccessibilityTree(tree);
+  const node = findBenchmarkNodeInNodes(nodes, platform, name);
   assert.ok(node, `${platform} accessibility tree omitted ${name}`);
   return node;
 }
@@ -63,7 +67,7 @@ export function assertBenchmarkTree(tree, platform, stateName) {
   const selected = Object.fromEntries(
     benchmarkContract.hierarchy.depthFirstOrder.map((name) => [
       name,
-      requireBenchmarkNode(tree, platform, name),
+      requireBenchmarkNode(tree, platform, name, nodes),
     ]),
   );
   for (const [name, node] of Object.entries(selected)) {

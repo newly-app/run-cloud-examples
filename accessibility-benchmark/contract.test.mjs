@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
+import { Client } from '@run-cloud/sdk';
 import { assertBenchmarkTree, benchmarkContract } from './contract.mjs';
 
 const repositoryRoot = new URL('../', import.meta.url);
@@ -78,6 +81,56 @@ test('the live suite uses only the published SDK surface and owns cleanup artifa
   assert.doesNotMatch(source, /fetch\s*\(/);
 });
 
+test('the pinned public SDK exposes every benchmark method without a network request', () => {
+  const rejectNetwork = () => {
+    throw new Error('the SDK surface test must not make a network request');
+  };
+  const cloud = new Client({
+    apiKey: 'rc_test_offline_surface_check',
+    apiUrl: 'https://offline.invalid',
+    fetch: rejectNetwork,
+  });
+
+  assert.equal(typeof cloud.account, 'function');
+  assert.equal(typeof cloud.assets.upload, 'function');
+  assert.equal(typeof cloud.assets.delete, 'function');
+  for (const platform of ['ios', 'android']) {
+    for (const method of [
+      'create',
+      'get',
+      'accessibilityTree',
+      'tap',
+      'swipe',
+      'screenshot',
+      'delete',
+    ]) {
+      assert.equal(typeof cloud[platform][method], 'function', `${platform}.${method} is unavailable`);
+    }
+  }
+});
+
+test('a shared app archive requires an explicitly selected platform', () => {
+  const result = spawnSync(process.execPath, [fileURLToPath(
+    new URL('accessibility-benchmark/live.test.mjs', repositoryRoot),
+  )], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      RUN_CLOUD_API_KEY: 'rc_test_offline_configuration_check',
+      RUN_CLOUD_BENCHMARK_APP: '/tmp/shared-app-archive',
+      RUN_CLOUD_BENCHMARK_PLATFORM: '',
+      RUN_CLOUD_BENCHMARK_RUN_ID: 'offline-configuration-check',
+      RUN_CLOUD_BENCHMARK_ARTIFACT_DIR: '/tmp/run-cloud-offline-configuration-check',
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(
+    `${result.stdout}\n${result.stderr}`,
+    /RUN_CLOUD_BENCHMARK_APP requires RUN_CLOUD_BENCHMARK_PLATFORM/,
+  );
+});
+
 test('the contract validator enforces both platform hierarchies and every documented state', () => {
   for (const platform of ['ios', 'android']) {
     for (const stateName of Object.keys(benchmarkContract.states)) {
@@ -85,8 +138,11 @@ test('the contract validator enforces both platform hierarchies and every docume
       const selected = assertBenchmarkTree(tree, platform, stateName);
       assert.deepEqual(Object.keys(selected), benchmarkContract.hierarchy.depthFirstOrder);
       const exposedSecret = structuredClone(tree);
-      exposedSecret.roots[0].children[0].children[4].value =
-        benchmarkContract.forbiddenAccessibleText;
+      const password = exposedSecret.roots[0].children[0].children.find(
+        (node) => node.id === `${platform}-password`,
+      );
+      assert.ok(password, `${platform} fixture omitted the password node`);
+      password.value = benchmarkContract.forbiddenAccessibleText;
       assert.throws(
         () => assertBenchmarkTree(exposedSecret, platform, stateName),
         /secure fixture text escaped/,
@@ -173,7 +229,7 @@ function fixtureTree(platform, stateName) {
     platform,
     capturedAt: '2026-08-11T00:00:00.000Z',
     screen: { width: 390, height: 844, unit: platform === 'ios' ? 'points' : 'pixels' },
-    nodeCount: 10,
+    nodeCount: 2 + benchmarkContract.hierarchy.depthFirstOrder.length,
     truncated: false,
     roots: [root],
   };
