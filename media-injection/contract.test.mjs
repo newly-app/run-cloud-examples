@@ -44,8 +44,14 @@ test('fixture generation retains hashes and machine-readable fingerprints', asyn
   const generated = await generateFixtures(directory);
   assert.equal(generated.manifest.camera.fingerprint, CAMERA_FINGERPRINT);
   assert.equal(generated.manifest.microphone.fingerprint, AUDIO_FINGERPRINT);
-  assert.match(generated.manifest.camera.sha256, /^[a-f0-9]{64}$/);
-  assert.match(generated.manifest.microphone.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(
+    generated.manifest.camera.sha256,
+    '18f1fa44128252d2980a0e5c2cafcedd2b32b73097fa29d0b0efa6f20f3eb4ab',
+  );
+  assert.equal(
+    generated.manifest.microphone.sha256,
+    'c6a2b1ac05891fcc3872c9cf553cc12386a045a976215b1e8a07d0a0b1400b41',
+  );
   const mp4 = await readFile(generated.cameraPath);
   assert.equal(mp4.subarray(4, 8).toString('ascii'), 'ftyp');
 });

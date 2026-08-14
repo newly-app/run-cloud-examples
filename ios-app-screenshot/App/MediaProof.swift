@@ -315,14 +315,14 @@ private enum CameraPatternFingerprint {
             (3 * width / 4, 3 * height / 4),
         ]
         return Set(points.compactMap { point in
-            classify(
-                averageNear: point.0,
+            classify(averageNear(
+                point.0,
                 y: point.1,
                 bytes: bytes,
                 rowBytes: rowBytes,
                 width: width,
                 height: height
-            )
+            ))
         })
     }
 

@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
+import ffmpegStatic from 'ffmpeg-static';
+
 const execFileAsync = promisify(execFile);
 export const CAMERA_FINGERPRINT = 'RCAM-v1:RGBY';
 export const AUDIO_FINGERPRINT = 'RAUD-v1:1000Hz';
@@ -20,8 +22,10 @@ export async function generateFixtures(outputDirectory, dependencies = {}) {
   await writeFile(microphonePath, toneWav());
 
   const run = dependencies.execFile ?? execFileAsync;
+  const ffmpeg = dependencies.ffmpeg ?? ffmpegStatic;
+  if (!ffmpeg) throw new Error('the pinned ffmpeg-static binary is unavailable for this platform');
   await run(
-    dependencies.ffmpeg ?? 'ffmpeg',
+    ffmpeg,
     [
       '-hide_banner',
       '-loglevel',
@@ -35,8 +39,12 @@ export async function generateFixtures(outputDirectory, dependencies = {}) {
       '[0:v][1:v]hstack=inputs=2[top];[2:v][3:v]hstack=inputs=2[bottom];'
         + '[top][bottom]vstack=inputs=2,format=yuv420p[pattern]',
       '-map', '[pattern]',
+      '-map_metadata', '-1',
       '-an',
       '-c:v', 'libx264',
+      '-threads', '1',
+      '-fflags', '+bitexact',
+      '-flags:v', '+bitexact',
       '-preset', 'veryfast',
       '-crf', '12',
       '-movflags', '+faststart',

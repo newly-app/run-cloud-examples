@@ -31,8 +31,9 @@ npm ci
 npm test
 ```
 
-`ffmpeg` must be on `PATH`. The generated inputs are build artifacts and are not
-checked into the repository.
+The package lock installs a pinned `ffmpeg-static` binary, so local and CI fixture
+generation use the same encoder release. The generated inputs are build artifacts
+and are not checked into the repository.
 
 ## Authenticated E2E run
 

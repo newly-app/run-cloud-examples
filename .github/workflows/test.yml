@@ -340,10 +340,6 @@ jobs:
             echo "::error::The live environment is missing RUN_CLOUD_API_URL."
             exit 1
           fi
-          command -v ffmpeg >/dev/null || {
-            echo "::error::ffmpeg is required to generate the deterministic camera input."
-            exit 1
-          }
           test -f "$RUN_CLOUD_MEDIA_APP"
           test -f "$RUN_CLOUD_SDK_ENTRYPOINT"
           test -f "$RUN_CLOUD_CLI_ENTRYPOINT"
