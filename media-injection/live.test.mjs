@@ -392,6 +392,7 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
   const deadline = Date.now() + APP_PASS_TIMEOUT_MS;
   let lastTree;
   let lastStatus = null;
+  let permissionTaps = 0;
   while (Date.now() < deadline) {
     throwIfAborted(signal);
     lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
@@ -402,6 +403,15 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     if (lastStatus?.includes(`${expectedInput.toUpperCase()} PASS`)) {
       assertMediaPass(lastStatus, expectedInput, attempt);
       return { tree: lastTree, status: lastStatus };
+    }
+    const button = permissionButton(lastTree);
+    if (button) {
+      await simulator.tap(sessionId, normalizedCenter(lastTree, button), {
+        requestId: `media:${mediaRun}:${platform}:${input}:${attempt}:post-injection-permission:${permissionTaps}`,
+        timeoutMs: 20_000,
+        signal,
+      });
+      permissionTaps += 1;
     }
     await wait(POLL_DELAY_MS, signal);
   }
