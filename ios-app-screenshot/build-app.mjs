@@ -30,6 +30,7 @@ export async function buildApp() {
       'iphonesimulator',
       'swiftc',
       join(sourceDirectory, 'AppDelegate.swift'),
+      join(sourceDirectory, 'MediaProof.swift'),
       '-sdk',
       sdkPath,
       '-target',

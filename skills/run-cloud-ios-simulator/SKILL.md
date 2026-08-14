@@ -79,6 +79,20 @@ controls or the `capsLock`, `numLock`, and `scrollLock` keys. Handle structured
 An acknowledgement means input dispatch completed. Confirm visible app effects
 with a screenshot or the signed viewer when the outcome matters.
 
+## Inject Deterministic Media
+
+Both platforms accept prerecorded camera and microphone input:
+
+```bash
+runcloud ios camera inject "$SESSION_ID" ./pattern.mp4 --bundle-id com.example.Camera --json
+runcloud android microphone inject "$SESSION_ID" ./tone.wav --bundle-id com.example.Recorder --json
+```
+
+`microphone` has the `mic` alias. Arm the native camera or microphone receiver
+before injecting, then verify app-owned frame or sample state; the service
+acknowledgement alone does not prove capture. Delete the returned media asset
+with `runcloud asset delete <asset-id>` after the proof.
+
 ## Use the TypeScript SDK
 
 ```bash
@@ -116,12 +130,13 @@ typed acknowledgements. Use `RunCloudError` fields such as `code`, `retryable`,
 `requestId`, and `action` when reporting API failures.
 
 The lifecycle surface also includes `create`, `list`, `get`, `openUrl`, `logs`,
-`followLogs`, and `delete`. Both platforms expose `screenshot`; iOS additionally
-supports `uploadVideo` and `uploadMicrophoneAudio`. Inspect the installed types
-for complete create, asset, log, and media options.
+`followLogs`, and `delete`. Both platforms expose `screenshot`,
+`uploadCameraVideo`, and `uploadMicrophoneAudio`; iOS additionally supports
+`uploadVideo` for Photos imports. Inspect the installed types for complete
+create, asset, log, and media options.
 
 In compact form, `cloud.ios`: `create`, `list`, `get`, `openUrl`, `logs`, `followLogs`, `screenshot`.
-`cloud.android` provides the same shared lifecycle and control operations.
+`cloud.android` provides the same shared lifecycle, media, and control operations.
 
 ## Diagnose App Failures
 

@@ -1,0 +1,14 @@
+{
+  "name": "run-cloud-native-media-injection-proof",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fixtures": "node generate-fixtures.mjs",
+    "test": "node --test contract.test.mjs",
+    "test:live": "node --test --test-reporter=tap live.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
