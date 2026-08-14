@@ -267,7 +267,7 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
                 }
                 self.audioEngine = engine
                 engine.prepare()
-                try? engine.start()
+                try engine.start()
                 self.showStatus(
                     "MICROPHONE READY \(Self.audioFingerprint) attempt=\(self.request.attempt) "
                         + "rate=\(Int(format.sampleRate.rounded()))"
