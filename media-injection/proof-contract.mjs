@@ -28,11 +28,13 @@ export function mediaStatus(tree) {
 }
 
 export function isExpectedPreInjectionStatus(status, { platform, input, attempt }) {
-  return platform === 'ios'
-    && input === 'camera'
-    && typeof status === 'string'
-    && status.includes('CAMERA FAIL code=camera-unavailable')
-    && status.includes(`attempt=${attempt}`);
+  if (platform !== 'ios' || typeof status !== 'string' || !status.includes(`attempt=${attempt}`)) {
+    return false;
+  }
+  return input === 'camera'
+    ? status.includes('CAMERA FAIL code=camera-unavailable')
+    : input === 'microphone'
+      && status.includes('MICROPHONE FAIL code=microphone-format');
 }
 
 export function permissionButton(tree) {

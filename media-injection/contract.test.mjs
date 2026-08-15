@@ -108,4 +108,12 @@ test('native proof status and permission controls are found without platform-spe
   assert.equal(isExpectedPreInjectionStatus(preAttach, {
     platform: 'android', input: 'camera', attempt: 'sdk-proof',
   }), false);
+
+  const preAudioAttach = 'MICROPHONE FAIL code=microphone-format attempt=cli-proof';
+  assert.equal(isExpectedPreInjectionStatus(preAudioAttach, {
+    platform: 'ios', input: 'microphone', attempt: 'cli-proof',
+  }), true);
+  assert.equal(isExpectedPreInjectionStatus(preAudioAttach, {
+    platform: 'ios', input: 'microphone', attempt: 'another-proof',
+  }), false);
 });
