@@ -5,6 +5,12 @@ export const fingerprints = {
   microphone: 'RAUD-v1:1000Hz',
 };
 
+const retryableAccessibilityCodes = new Set([
+  'accessibility_unavailable',
+  'accessibility_transport_error',
+  'accessibility_timeout',
+]);
+
 export function flattenAccessibilityTree(tree) {
   const nodes = [];
   const visit = (node) => {
@@ -39,7 +45,7 @@ export function isExpectedPreInjectionStatus(status, { platform, input, attempt 
 
 export function isRetryableAccessibilityFailure(error) {
   return error?.retryable === true
-    && error?.code === 'accessibility_unavailable'
+    && retryableAccessibilityCodes.has(error?.code)
     && error?.action === 'accessibility';
 }
 

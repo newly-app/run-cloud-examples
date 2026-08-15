@@ -125,8 +125,23 @@ test('native proof status and permission controls are found without platform-spe
     action: 'accessibility',
   }), true);
   assert.equal(isRetryableAccessibilityFailure({
+    retryable: true,
+    code: 'accessibility_transport_error',
+    action: 'accessibility',
+  }), true);
+  assert.equal(isRetryableAccessibilityFailure({
+    retryable: true,
+    code: 'accessibility_timeout',
+    action: 'accessibility',
+  }), true);
+  assert.equal(isRetryableAccessibilityFailure({
     retryable: false,
     code: 'accessibility_unavailable',
+    action: 'accessibility',
+  }), false);
+  assert.equal(isRetryableAccessibilityFailure({
+    retryable: true,
+    code: 'simulator_session_ended',
     action: 'accessibility',
   }), false);
 });
