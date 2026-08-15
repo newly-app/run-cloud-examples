@@ -27,7 +27,6 @@ import android.widget.TextView;
 
 import java.nio.ByteBuffer;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
 final class MediaProofController {
@@ -83,8 +82,10 @@ final class MediaProofController {
     private ImageReader imageReader;
     private int observedCameraFrames;
     private int matchingCameraFrames;
+    private boolean cameraPassed;
     private AudioRecord audioRecord;
     private Thread audioThread;
+    private volatile boolean microphonePassed;
     private volatile boolean stopped;
 
     MediaProofController(Activity activity, Request request) {
@@ -304,15 +305,11 @@ final class MediaProofController {
             } else {
                 matchingCameraFrames = 0;
             }
-            if (matchingCameraFrames >= 3) {
+            if (!cameraPassed && matchingCameraFrames >= 3) {
+                cameraPassed = true;
                 showStatus(
                     "CAMERA PASS " + CAMERA_FINGERPRINT + " attempt=" + request.attempt
                         + " frames=" + observedCameraFrames + " matches=" + matchingCameraFrames
-                );
-            } else if (observedCameraFrames % 10 == 0) {
-                showStatus(
-                    "CAMERA WAIT " + CAMERA_FINGERPRINT + " attempt=" + request.attempt
-                        + " frames=" + observedCameraFrames + " colors=" + colors
                 );
             }
         } finally {
@@ -468,17 +465,12 @@ final class MediaProofController {
             }
             if (count == 0) continue;
             ToneAnalyzer.Observation observation = analyzer.observe(samples, count);
-            if (observation.matchedWindows >= 3) {
+            if (!microphonePassed && observation.matchedWindows >= 3) {
+                microphonePassed = true;
                 showStatus(
                     "MICROPHONE PASS " + AUDIO_FINGERPRINT + " attempt=" + request.attempt
                         + " samples=" + observation.samples + " rate=" + AUDIO_SAMPLE_RATE
                         + " measured=" + Math.round(observation.measuredHz) + "Hz"
-                );
-            } else if (observation.windows % 4 == 0) {
-                showStatus(
-                    "MICROPHONE WAIT " + AUDIO_FINGERPRINT + " attempt=" + request.attempt
-                        + " samples=" + observation.samples + " rms="
-                        + String.format(Locale.US, "%.3f", observation.rms)
                 );
             }
         }
