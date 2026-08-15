@@ -74,7 +74,9 @@ export function assertMediaPass(status, input, attempt) {
   assert.ok(status.includes(`attempt=${attempt}`), `${input} proof came from another attempt`);
   if (input === 'camera') {
     assert.match(status, /\bframes=\d+\b/);
-    assert.match(status, /\bmatches=[3-9]\d*\b/);
+    const matchingFrames = status.match(/\bmatches=(\d+)\b/);
+    assert.ok(matchingFrames, 'camera proof omitted its matching frame count');
+    assert.ok(Number(matchingFrames[1]) >= 3, 'camera proof reported fewer than three matching frames');
   } else {
     assert.match(status, /\bsamples=\d+\b/);
     assert.match(status, /\bmeasured=(?:9\d\d|10\d\d)Hz\b/);

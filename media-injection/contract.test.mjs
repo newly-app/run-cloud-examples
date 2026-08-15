@@ -83,6 +83,7 @@ test('native proof status and permission controls are found without platform-spe
   };
   const status = mediaStatus(tree);
   assertMediaPass(status, 'camera', 'sdk');
+  assertMediaPass('CAMERA PASS RCAM-v1:RGBY attempt=sdk frames=184 matches=184', 'camera', 'sdk');
   const permission = permissionButton(tree);
   assert.equal(permission.label, 'While using the app');
   assert.deepEqual(normalizedCenter(tree, permission), { x: 0.5, y: 0.75 });
