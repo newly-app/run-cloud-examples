@@ -158,6 +158,15 @@ async function runMediaProof(signal) {
       session = await stage(`${surface}-session-ready`, async () =>
         await waitUntilActive(simulator, session, signal));
       sessions.at(-1).session = session;
+      await writeJson(`${surface}-session.json`, {
+        id: session.id,
+        platform: session.platform,
+        status: session.status,
+        inactivityTimeoutSeconds: session.inactivityTimeoutSeconds ?? null,
+        inactivityCountdownSeconds: session.inactivityCountdownSeconds ?? null,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt ?? null,
+      });
 
       const deepLink = `runcloudproof://media/${input}?attempt=${encodeURIComponent(attempt)}`;
       await stage(`${surface}-app-open`, async () =>
@@ -370,8 +379,13 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
   const deadline = Date.now() + APP_READY_TIMEOUT_MS;
   let lastStatus = null;
   let permissionTaps = 0;
+  let nextKeepAliveAt = Date.now() + 15_000;
   while (Date.now() < deadline) {
     throwIfAborted(signal);
+    if (Date.now() >= nextKeepAliveAt) {
+      await simulator.keepAlive(sessionId);
+      nextKeepAliveAt = Date.now() + 15_000;
+    }
     const tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     lastStatus = mediaStatus(tree) ?? lastStatus;
     if (isExpectedPreInjectionStatus(lastStatus, { platform, input, attempt })) {
@@ -407,9 +421,19 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
   let lastTree;
   let lastStatus = null;
   let permissionTaps = 0;
+  let nextKeepAliveAt = Date.now();
   while (Date.now() < deadline) {
     throwIfAborted(signal);
-    lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    if (Date.now() >= nextKeepAliveAt) {
+      await simulator.keepAlive(sessionId);
+      nextKeepAliveAt = Date.now() + 15_000;
+    }
+    try {
+      lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    } catch (error) {
+      if (lastTree) await writeJson(`${attempt}-last-tree-before-poll-error.json`, lastTree);
+      throw error;
+    }
     lastStatus = mediaStatus(lastTree) ?? lastStatus;
     if (lastStatus?.includes(' FAIL ') && !isExpectedPreInjectionStatus(lastStatus, {
       platform,
