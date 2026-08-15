@@ -18,6 +18,7 @@ import {
   assertMediaPass,
   fingerprints,
   isExpectedPreInjectionStatus,
+  isRetryableAccessibilityFailure,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -386,7 +387,14 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
       await simulator.keepAlive(sessionId);
       nextKeepAliveAt = Date.now() + 15_000;
     }
-    const tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    let tree;
+    try {
+      tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    } catch (error) {
+      if (!isRetryableAccessibilityFailure(error)) throw error;
+      await wait(POLL_DELAY_MS, signal);
+      continue;
+    }
     lastStatus = mediaStatus(tree) ?? lastStatus;
     if (isExpectedPreInjectionStatus(lastStatus, { platform, input, attempt })) {
       return { tree, status: lastStatus, permissionTaps };
@@ -431,6 +439,10 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     try {
       lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     } catch (error) {
+      if (isRetryableAccessibilityFailure(error)) {
+        await wait(POLL_DELAY_MS, signal);
+        continue;
+      }
       if (lastTree) await writeJson(`${attempt}-last-tree-before-poll-error.json`, lastTree);
       throw error;
     }

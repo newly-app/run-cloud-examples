@@ -37,6 +37,12 @@ export function isExpectedPreInjectionStatus(status, { platform, input, attempt 
       && status.includes('MICROPHONE FAIL code=microphone-format');
 }
 
+export function isRetryableAccessibilityFailure(error) {
+  return error?.retryable === true
+    && error?.code === 'accessibility_unavailable'
+    && error?.action === 'accessibility';
+}
+
 export function permissionButton(tree) {
   const nodes = flattenAccessibilityTree(tree);
   const allowedLabels = [

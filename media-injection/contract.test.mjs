@@ -15,6 +15,7 @@ import {
 import {
   assertMediaPass,
   isExpectedPreInjectionStatus,
+  isRetryableAccessibilityFailure,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -115,5 +116,16 @@ test('native proof status and permission controls are found without platform-spe
   }), true);
   assert.equal(isExpectedPreInjectionStatus(preAudioAttach, {
     platform: 'ios', input: 'microphone', attempt: 'another-proof',
+  }), false);
+
+  assert.equal(isRetryableAccessibilityFailure({
+    retryable: true,
+    code: 'accessibility_unavailable',
+    action: 'accessibility',
+  }), true);
+  assert.equal(isRetryableAccessibilityFailure({
+    retryable: false,
+    code: 'accessibility_unavailable',
+    action: 'accessibility',
   }), false);
 });
