@@ -243,6 +243,15 @@ async function runMediaProof(signal) {
     });
   } catch (error) {
     operationError = asError(error);
+    const diagnostics = await collectFailureEvidence(sessions, currentStage);
+    await writeJson('failure-diagnostics.json', {
+      schemaVersion: 1,
+      platform,
+      input,
+      mediaRun,
+      stage: currentStage,
+      sessions: diagnostics,
+    });
     await writeJson('failure.json', {
       schemaVersion: 1,
       platform,
@@ -250,6 +259,7 @@ async function runMediaProof(signal) {
       mediaRun,
       stage: currentStage,
       failure: sanitizedFailure(operationError),
+      diagnostics: 'failure-diagnostics.json',
     });
   }
 
@@ -511,6 +521,52 @@ async function writeScreenshot(simulator, sessionId, filename, signal) {
   assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   assert.ok(bytes.byteLength > 1_000, `${filename} was unexpectedly small`);
   await writeFile(resolve(artifactDirectory, filename), bytes);
+}
+
+async function collectFailureEvidence(sessions, failedStage) {
+  const stageName = safeRunId(failedStage).slice(0, 48);
+  const diagnostics = [];
+  for (const retained of sessions) {
+    const prefix = `${retained.surface}-failure-${stageName}`;
+    const sessionEvidence = {
+      surface: retained.surface,
+      sessionId: retained.session.id,
+      artifacts: {},
+      failures: [],
+    };
+    try {
+      const session = await retained.simulator.get(retained.session.id);
+      sessionEvidence.sessionStatus = session.status;
+    } catch (error) {
+      sessionEvidence.failures.push({ operation: 'session', ...sanitizedFailure(asError(error)) });
+    }
+    try {
+      const tree = await retained.simulator.accessibilityTree(retained.session.id, { timeoutMs: 20_000 });
+      const filename = `${prefix}-tree.json`;
+      await writeJson(filename, tree);
+      sessionEvidence.artifacts.accessibilityTree = filename;
+      sessionEvidence.lastAppStatus = mediaStatus(tree);
+    } catch (error) {
+      sessionEvidence.failures.push({ operation: 'accessibility', ...sanitizedFailure(asError(error)) });
+    }
+    try {
+      const filename = `${prefix}.png`;
+      await writeScreenshot(retained.simulator, retained.session.id, filename);
+      sessionEvidence.artifacts.screenshot = filename;
+    } catch (error) {
+      sessionEvidence.failures.push({ operation: 'screenshot', ...sanitizedFailure(asError(error)) });
+    }
+    try {
+      const logs = await retained.simulator.logs(retained.session.id, { tail: 300 });
+      const filename = `${prefix}-logs.json`;
+      await writeJson(filename, logs);
+      sessionEvidence.artifacts.logs = filename;
+    } catch (error) {
+      sessionEvidence.failures.push({ operation: 'logs', ...sanitizedFailure(asError(error)) });
+    }
+    diagnostics.push(sessionEvidence);
+  }
+  return diagnostics;
 }
 
 async function writeJson(filename, value) {
