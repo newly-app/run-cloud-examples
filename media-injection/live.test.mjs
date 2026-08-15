@@ -411,7 +411,11 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     throwIfAborted(signal);
     lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     lastStatus = mediaStatus(lastTree) ?? lastStatus;
-    if (lastStatus?.includes(' FAIL ')) {
+    if (lastStatus?.includes(' FAIL ') && !isExpectedPreInjectionStatus(lastStatus, {
+      platform,
+      input: expectedInput,
+      attempt,
+    })) {
       throw new Error(`native app rejected injected ${expectedInput}: ${lastStatus}`);
     }
     if (lastStatus?.includes(`${expectedInput.toUpperCase()} PASS`)) {
