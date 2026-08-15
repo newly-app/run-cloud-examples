@@ -84,4 +84,19 @@ test('native proof status and permission controls are found without platform-spe
   const permission = permissionButton(tree);
   assert.equal(permission.label, 'While using the app');
   assert.deepEqual(normalizedCenter(tree, permission), { x: 0.5, y: 0.75 });
+
+  const deepLinkConfirmation = {
+    screen: { width: 100, height: 200 },
+    roots: [{
+      label: null,
+      children: [{
+        label: 'Open',
+        bounds: { x: 50, y: 120, width: 40, height: 30 },
+        states: { enabled: true },
+        native: { platform: 'ios' },
+        children: [],
+      }],
+    }],
+  };
+  assert.equal(permissionButton(deepLinkConfirmation).label, 'Open');
 });

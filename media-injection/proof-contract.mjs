@@ -33,6 +33,7 @@ export function permissionButton(tree) {
     /^allow$/i,
     /^while using the app$/i,
     /^only this time$/i,
+    /^open$/i,
   ];
   return nodes.find((node) => {
     if (!node.bounds || node.states?.enabled === false) return false;
