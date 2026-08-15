@@ -17,6 +17,7 @@ import { generateFixtures } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
   fingerprints,
+  isExpectedPreInjectionStatus,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -373,6 +374,9 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
     throwIfAborted(signal);
     const tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     lastStatus = mediaStatus(tree) ?? lastStatus;
+    if (isExpectedPreInjectionStatus(lastStatus, { platform, input, attempt })) {
+      return { tree, status: lastStatus, permissionTaps };
+    }
     if (lastStatus?.includes(' FAIL ')) {
       throw new Error(`native app failed while arming ${input}: ${lastStatus}`);
     }

@@ -27,6 +27,14 @@ export function mediaStatus(tree) {
   return [...new Set(values)].join(' ');
 }
 
+export function isExpectedPreInjectionStatus(status, { platform, input, attempt }) {
+  return platform === 'ios'
+    && input === 'camera'
+    && typeof status === 'string'
+    && status.includes('CAMERA FAIL code=camera-unavailable')
+    && status.includes(`attempt=${attempt}`);
+}
+
 export function permissionButton(tree) {
   const nodes = flattenAccessibilityTree(tree);
   const allowedLabels = [

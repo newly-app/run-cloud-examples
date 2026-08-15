@@ -14,6 +14,7 @@ import {
 } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
+  isExpectedPreInjectionStatus,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -99,4 +100,12 @@ test('native proof status and permission controls are found without platform-spe
     }],
   };
   assert.equal(permissionButton(deepLinkConfirmation).label, 'Open');
+
+  const preAttach = 'CAMERA FAIL code=camera-unavailable attempt=sdk-proof';
+  assert.equal(isExpectedPreInjectionStatus(preAttach, {
+    platform: 'ios', input: 'camera', attempt: 'sdk-proof',
+  }), true);
+  assert.equal(isExpectedPreInjectionStatus(preAttach, {
+    platform: 'android', input: 'camera', attempt: 'sdk-proof',
+  }), false);
 });
