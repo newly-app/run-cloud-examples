@@ -340,6 +340,10 @@ jobs:
             echo "::error::The live environment is missing RUN_CLOUD_API_URL."
             exit 1
           fi
+          if ! node -e 'process.exit(new URL(process.env.RUN_CLOUD_API_URL).origin === "https://api.run.cloud" ? 0 : 1)'; then
+            echo "::error::The production media proof must target https://api.run.cloud."
+            exit 1
+          fi
           test -f "$RUN_CLOUD_MEDIA_APP"
           test -f "$RUN_CLOUD_SDK_ENTRYPOINT"
           test -f "$RUN_CLOUD_CLI_ENTRYPOINT"
