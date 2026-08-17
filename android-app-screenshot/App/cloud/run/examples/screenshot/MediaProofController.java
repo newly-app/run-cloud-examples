@@ -83,6 +83,7 @@ final class MediaProofController {
     private int observedCameraFrames;
     private int matchingCameraFrames;
     private boolean cameraPassed;
+    private String cameraChromaLayout = "uv";
     private AudioRecord audioRecord;
     private Thread audioThread;
     private volatile boolean microphonePassed;
@@ -310,6 +311,13 @@ final class MediaProofController {
                 showStatus(
                     "CAMERA PASS " + CAMERA_FINGERPRINT + " attempt=" + request.attempt
                         + " frames=" + observedCameraFrames + " matches=" + matchingCameraFrames
+                        + " layout=" + cameraChromaLayout
+                );
+            } else if (!cameraPassed && observedCameraFrames % 10 == 0) {
+                showStatus(
+                    "CAMERA READY " + CAMERA_FINGERPRINT + " attempt=" + request.attempt
+                        + " frames=" + observedCameraFrames + " matches=" + matchingCameraFrames
+                        + " colors=" + colorSummary(colors) + " layout=" + cameraChromaLayout
                 );
             }
         } finally {
@@ -317,28 +325,56 @@ final class MediaProofController {
         }
     }
 
+    private String colorSummary(Set<String> colors) {
+        StringBuilder result = new StringBuilder();
+        for (String color : new String[] { "R", "G", "B", "Y" }) {
+            if (colors.contains(color)) result.append(color);
+        }
+        return result.length() == 0 ? "none" : result.toString();
+    }
+
     private Set<String> cameraColors(Image image) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int[][] points = new int[][] {
-            { width / 4, height / 4 },
-            { 3 * width / 4, height / 4 },
-            { width / 4, 3 * height / 4 },
-            { 3 * width / 4, 3 * height / 4 },
-        };
+        Set<String> uvColors = cameraColors(image, 1, 2);
+        Set<String> vuColors = cameraColors(image, 2, 1);
+        if (vuColors.size() > uvColors.size()) {
+            cameraChromaLayout = "vu";
+            return vuColors;
+        }
+        cameraChromaLayout = "uv";
+        return uvColors;
+    }
+
+    private Set<String> cameraColors(Image image, int uPlaneIndex, int vPlaneIndex) {
+        int[] fractions = new int[] { 5, 20, 35, 50, 65, 80, 95 };
         Set<String> result = new HashSet<>();
-        for (int[] point : points) {
-            String color = classify(averageRgb(image, point[0], point[1]));
-            if (color != null) result.add(color);
+        for (int yFraction : fractions) {
+            for (int xFraction : fractions) {
+                String color = classify(averageRgb(
+                    image,
+                    Math.min(image.getWidth() - 1, image.getWidth() * xFraction / 100),
+                    Math.min(image.getHeight() - 1, image.getHeight() * yFraction / 100),
+                    uPlaneIndex,
+                    vPlaneIndex
+                ));
+                if (color != null) result.add(color);
+            }
         }
         return result;
     }
 
-    private double[] averageRgb(Image image, int centerX, int centerY) {
+    private double[] averageRgb(
+        Image image,
+        int centerX,
+        int centerY,
+        int uPlaneIndex,
+        int vPlaneIndex
+    ) {
         Image.Plane[] planes = image.getPlanes();
+        Image.Plane uPlane = planes[uPlaneIndex];
+        Image.Plane vPlane = planes[vPlaneIndex];
         ByteBuffer yBuffer = planes[0].getBuffer();
-        ByteBuffer uBuffer = planes[1].getBuffer();
-        ByteBuffer vBuffer = planes[2].getBuffer();
+        ByteBuffer uBuffer = uPlane.getBuffer();
+        ByteBuffer vBuffer = vPlane.getBuffer();
         int radius = Math.max(2, Math.min(image.getWidth(), image.getHeight()) / 48);
         double red = 0;
         double green = 0;
@@ -354,10 +390,10 @@ final class MediaProofController {
                     + x * planes[0].getPixelStride()));
                 int chromaX = x / 2;
                 int chromaY = y / 2;
-                int uValue = unsigned(uBuffer.get(chromaY * planes[1].getRowStride()
-                    + chromaX * planes[1].getPixelStride()));
-                int vValue = unsigned(vBuffer.get(chromaY * planes[2].getRowStride()
-                    + chromaX * planes[2].getPixelStride()));
+                int uValue = unsigned(uBuffer.get(chromaY * uPlane.getRowStride()
+                    + chromaX * uPlane.getPixelStride()));
+                int vValue = unsigned(vBuffer.get(chromaY * vPlane.getRowStride()
+                    + chromaX * vPlane.getPixelStride()));
                 double[] rgb = yuvToRgb(yValue, uValue, vValue);
                 red += rgb[0];
                 green += rgb[1];

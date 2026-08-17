@@ -70,6 +70,22 @@ test('the iOS fixture retries microphone setup until the injected route exists',
   assert.match(source, /self\?\.configureMicrophone\(\)/);
 });
 
+test('the Android fixture recognizes the full pattern after external-camera transforms', async () => {
+  const source = await readFile(
+    new URL(
+      '../android-app-screenshot/App/cloud/run/examples/screenshot/MediaProofController.java',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.match(source, /int\[\] fractions = new int\[\] \{ 5, 20, 35, 50, 65, 80, 95 \}/);
+  assert.match(source, /colors\.contains\("R"\)/);
+  assert.match(source, /colors\.contains\("G"\)/);
+  assert.match(source, /colors\.contains\("B"\)/);
+  assert.match(source, /colors\.contains\("Y"\)/);
+  assert.match(source, /matchingCameraFrames >= 3/);
+});
+
 test('native proof status and permission controls are found without platform-specific mocks', () => {
   const tree = {
     screen: { width: 100, height: 200 },
