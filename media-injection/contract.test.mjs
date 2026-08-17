@@ -14,6 +14,7 @@ import {
 } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
+  deepLinkConfirmationPoint,
   isExpectedPreInjectionStatus,
   isRetryableAccessibilityFailure,
   mediaStatus,
@@ -102,6 +103,10 @@ test('native proof status and permission controls are found without platform-spe
     }],
   };
   assert.equal(permissionButton(deepLinkConfirmation).label, 'Open');
+  assert.deepEqual(deepLinkConfirmationPoint('ios', null, false), { x: 0.69, y: 0.535 });
+  assert.equal(deepLinkConfirmationPoint('android', null, false), null);
+  assert.equal(deepLinkConfirmationPoint('ios', 'CAMERA READY', false), null);
+  assert.equal(deepLinkConfirmationPoint('ios', null, true), null);
 
   const preAttach = 'CAMERA FAIL code=camera-unavailable attempt=sdk-proof';
   assert.equal(isExpectedPreInjectionStatus(preAttach, {
