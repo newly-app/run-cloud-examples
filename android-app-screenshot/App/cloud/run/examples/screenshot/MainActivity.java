@@ -40,10 +40,16 @@ public final class MainActivity extends Activity {
     private Button navigationButton;
     private int tapCount;
     private boolean showingAccessibilityDetails;
+    private MediaProofController mediaProof;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        MediaProofController.Request mediaRequest = MediaProofController.Request.from(getIntent());
+        if (mediaRequest != null) {
+            showMediaProof(mediaRequest);
+            return;
+        }
         getWindow().setStatusBarColor(Color.rgb(5, 18, 25));
         getWindow().setNavigationBarColor(Color.rgb(7, 31, 39));
 
@@ -181,7 +187,42 @@ public final class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        MediaProofController.Request mediaRequest = MediaProofController.Request.from(intent);
+        if (mediaRequest != null) {
+            showMediaProof(mediaRequest);
+            return;
+        }
+        if (mediaProof != null) {
+            mediaProof.stop();
+            mediaProof = null;
+            recreate();
+            return;
+        }
         showDeepLink(intent, "warm");
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode,
+        String[] permissions,
+        int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (mediaProof != null) {
+            mediaProof.onRequestPermissionsResult(requestCode, grantResults);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (mediaProof != null) mediaProof.stop();
+        super.onDestroy();
+    }
+
+    private void showMediaProof(MediaProofController.Request request) {
+        if (mediaProof != null) mediaProof.stop();
+        mediaProof = new MediaProofController(this, request);
+        mediaProof.start();
     }
 
     @Override

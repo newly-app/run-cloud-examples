@@ -7,10 +7,20 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: Run both metered native accessibility benchmarks on run.cloud
+        description: Run authenticated native accessibility and media-injection proofs on run.cloud
         required: true
         default: false
         type: boolean
+      sdk_version:
+        description: Public @run-cloud/sdk version used by the media proof
+        required: true
+        default: latest
+        type: string
+      cli_version:
+        description: Public runcloud CLI version used by the media proof
+        required: true
+        default: latest
+        type: string
 
 permissions:
   contents: read
@@ -33,6 +43,7 @@ jobs:
             ios-app-screenshot/package-lock.json
             android-app-screenshot/package-lock.json
             accessibility-benchmark/package-lock.json
+            media-injection/package-lock.json
             live-camera-relay/package-lock.json
 
       - name: Install published-package test dependencies
@@ -53,6 +64,10 @@ jobs:
 
       - name: Install accessibility benchmark dependencies
         working-directory: accessibility-benchmark
+        run: npm ci
+
+      - name: Install media injection proof dependencies
+        working-directory: media-injection
         run: npm ci
 
       - name: Install camera example dependencies
@@ -77,6 +92,10 @@ jobs:
 
       - name: Test native accessibility benchmark contracts
         working-directory: accessibility-benchmark
+        run: npm test
+
+      - name: Test native media injection contracts
+        working-directory: media-injection
         run: npm test
 
       - name: Test mosaic example
@@ -220,5 +239,125 @@ jobs:
         with:
           name: ${{ matrix.platform }}-run-cloud-accessibility-proof-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/run-cloud-accessibility-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+
+  media-live:
+    name: Live ${{ matrix.platform }} ${{ matrix.input }} injection proof on run.cloud
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.live == true
+    needs: [test, native-app-build]
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    environment: live
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, android]
+        input: [camera, microphone]
+        include:
+          - platform: ios
+            artifact: run-cloud-parity-ios-app
+            artifact-file: RunCloudProof.app.tar.gz
+          - platform: android
+            artifact: run-cloud-parity-android-app
+            artifact-file: RunCloudProof.apk
+    runs-on: ubuntu-latest
+    concurrency:
+      group: run-cloud-media-${{ matrix.platform }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: media-injection/package-lock.json
+
+      - name: Install proof harness
+        working-directory: media-injection
+        run: npm ci
+
+      - name: Install selected public SDK and CLI
+        working-directory: media-injection
+        env:
+          SDK_VERSION: ${{ inputs.sdk_version }}
+          CLI_VERSION: ${{ inputs.cli_version }}
+        run: |
+          set -euo pipefail
+          version_pattern='^(latest|[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.-]+)?)$'
+          if ! [[ "$SDK_VERSION" =~ $version_pattern ]]; then
+            echo "::error::sdk_version must be latest or an exact semver."
+            exit 1
+          fi
+          if ! [[ "$CLI_VERSION" =~ $version_pattern ]]; then
+            echo "::error::cli_version must be latest or an exact semver."
+            exit 1
+          fi
+          npm install --no-save --no-package-lock \
+            "@run-cloud/sdk@$SDK_VERSION" \
+            "runcloud@$CLI_VERSION"
+          echo "RUN_CLOUD_SDK_ENTRYPOINT=$PWD/node_modules/@run-cloud/sdk/dist/index.js" >> "$GITHUB_ENV"
+          echo "RUN_CLOUD_CLI_ENTRYPOINT=$PWD/node_modules/runcloud/dist/run-cloud.js" >> "$GITHUB_ENV"
+
+      - name: Download CI-built native app
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/native-app
+
+      - name: Prepare media proof evidence
+        run: |
+          set -euo pipefail
+          results_dir="$RUNNER_TEMP/run-cloud-media-${{ matrix.platform }}-${{ matrix.input }}"
+          mkdir -p "$results_dir"
+          {
+            echo "RUN_CLOUD_MEDIA_PLATFORM=${{ matrix.platform }}"
+            echo "RUN_CLOUD_MEDIA_INPUT=${{ matrix.input }}"
+            echo "RUN_CLOUD_MEDIA_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.platform }}-${{ matrix.input }}"
+            echo "RUN_CLOUD_MEDIA_APP=$RUNNER_TEMP/native-app/${{ matrix.artifact-file }}"
+            echo "RUN_CLOUD_MEDIA_ARTIFACT_DIR=$results_dir"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate live run.cloud configuration
+        env:
+          RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
+          RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RUN_CLOUD_API_KEY:-}" ]; then
+            echo "::error::The live environment is missing RUN_CLOUD_API_KEY."
+            exit 1
+          fi
+          if [ -z "${RUN_CLOUD_API_URL:-}" ]; then
+            echo "::error::The live environment is missing RUN_CLOUD_API_URL."
+            exit 1
+          fi
+          test -f "$RUN_CLOUD_MEDIA_APP"
+          test -f "$RUN_CLOUD_SDK_ENTRYPOINT"
+          test -f "$RUN_CLOUD_CLI_ENTRYPOINT"
+
+      - name: Run public SDK and CLI media proof
+        working-directory: media-injection
+        env:
+          RUN_CLOUD_API_KEY: ${{ secrets.RUN_CLOUD_API_KEY }}
+          RUN_CLOUD_API_URL: ${{ secrets.RUN_CLOUD_API_URL }}
+        run: |
+          set -o pipefail
+          npm run test:live 2>&1 | tee "$RUN_CLOUD_MEDIA_ARTIFACT_DIR/test-report.tap"
+
+      - name: Upload native media proof evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.input }}-media-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/run-cloud-media-${{ matrix.platform }}-${{ matrix.input }}
           if-no-files-found: error
           retention-days: 14

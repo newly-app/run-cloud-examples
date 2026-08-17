@@ -14,7 +14,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         window.makeKeyAndVisible()
         self.window = window
         if let url = launchOptions?[.url] as? URL {
-            proofViewController.showDeepLink(url, delivery: "cold")
+            showDeepLink(url, delivery: "cold")
+        } else if let request = MediaProofRequest.restore() {
+            window.rootViewController = MediaProofViewController(request: request)
         }
         return true
     }
@@ -25,11 +27,21 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
         guard url.scheme?.lowercased() == "runcloudproof" else { return false }
-        guard let proofViewController = window?.rootViewController as? ProofViewController else {
-            return false
-        }
-        proofViewController.showDeepLink(url, delivery: "warm")
+        showDeepLink(url, delivery: "warm")
         return true
+    }
+
+    private func showDeepLink(_ url: URL, delivery: String) {
+        if let request = MediaProofRequest(url: url) {
+            request.persist()
+            window?.rootViewController = MediaProofViewController(request: request)
+            return
+        }
+        MediaProofRequest.clear()
+        let proofViewController = ProofViewController()
+        proofViewController.loadViewIfNeeded()
+        proofViewController.showDeepLink(url, delivery: delivery)
+        window?.rootViewController = proofViewController
     }
 }
 

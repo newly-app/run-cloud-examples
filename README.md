@@ -33,6 +33,18 @@ captures the resulting trees and screenshots.
 See [accessibility-benchmark/README.md](accessibility-benchmark/README.md) for
 the exact contract and live command.
 
+## Native camera and microphone injection proof
+
+The maintained Swift and Java apps also recognize deterministic camera frames and
+microphone samples inside real iOS Simulator and Android Emulator sessions. The
+four-way live matrix exercises both the public TypeScript SDK and `runcloud` CLI in
+independent sessions, then requires native fingerprints (`RCAM-v1:RGBY` or
+`RAUD-v1:1000Hz`) from the accessibility tree. API acknowledgements alone cannot
+pass the test.
+
+See [media-injection/README.md](media-injection/README.md) for input generation,
+local authenticated commands, cleanup behavior, and retained evidence.
+
 ## Examples
 
 ### Real iOS app screenshot
@@ -103,6 +115,10 @@ npm run demo -- --open
 See [live-camera-relay/README.md](live-camera-relay/README.md) for camera
 permissions, session requirements, and the local Expo workflow.
 
+This browser/WebRTC relay predates the native media proof above. It demonstrates a
+live local webcam relay, while the native suite provides deterministic in-app frame
+and microphone assertions on both mobile platforms.
+
 ## Verify the published onboarding
 
 The published-artifact suite installs exact npm releases, exercises the SDK
@@ -116,8 +132,8 @@ npm test
 ```
 
 The existing `Test examples` GitHub Actions workflow builds both native apps,
-then runs their published-SDK accessibility benchmarks from its `live` iOS and
-Android matrix jobs using the workflow's protected `live` environment.
+then runs their published-SDK accessibility benchmarks and public SDK/CLI media
+proofs from its protected `live` environment.
 To run either screenshot example directly:
 
 ```bash
@@ -130,9 +146,9 @@ The live workflow is opt-in so normal pull requests never create paid sessions.
 Every pull request still builds the native fixtures and publishes them as the
 `run-cloud-parity-ios-app` and `run-cloud-parity-android-app` workflow artifacts.
 On manual live dispatch, each matrix job downloads its exact build artifact,
-creates a real run.cloud session, and always uploads TAP, JSON-tree, PNG,
-Actions-runner identity, failure, and cleanup evidence. The test releases its
-session and deletes its uploaded app before returning success or failure.
+creates real run.cloud sessions, and always uploads TAP, JSON-tree, PNG,
+Actions-runner identity, failure, and cleanup evidence. The tests release their
+sessions and delete uploaded apps and media before returning success or failure.
 
 ## Agent skills
 

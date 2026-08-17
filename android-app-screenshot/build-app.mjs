@@ -42,6 +42,7 @@ export async function buildApp(dependencies = {}) {
     '-d',
     classesDirectory,
     join(javaSourceDirectory, 'MainActivity.java'),
+    join(javaSourceDirectory, 'MediaProofController.java'),
     join(javaSourceDirectory, 'TapTargetAlignment.java'),
   ]);
 

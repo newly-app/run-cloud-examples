@@ -1,5 +1,10 @@
 # Upload a native iOS app and take a screenshot
 
+The native fixture also contains the deterministic camera and microphone receivers
+used by the repository's [media injection proof](../media-injection/README.md).
+Normal screenshot and accessibility behavior is unchanged unless the app receives a
+`runcloudproof://media/camera` or `runcloudproof://media/microphone` deep link.
+
 This example builds a small UIKit app from the included Swift source, uploads
 the simulator archive, launches it in run.cloud, and saves a validated PNG.
 

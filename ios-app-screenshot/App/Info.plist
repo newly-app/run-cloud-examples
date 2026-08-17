@@ -33,6 +33,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Verify deterministic run.cloud camera input.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Verify deterministic run.cloud microphone input.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
