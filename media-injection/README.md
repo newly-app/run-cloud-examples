@@ -72,6 +72,7 @@ session and deletes every app/media asset. Its retained evidence includes:
 - `result.json`, `failure.json` when needed, and `cleanup.json`.
 
 The repository's `Test examples` workflow builds the apps from source and exposes a
-four-job `platform × input` live matrix behind its protected `live` environment.
-Camera and microphone jobs are serialized per platform to respect mobile fleet
-capacity, and artifacts are retained even when a stage fails.
+four-job `platform × input` live matrix behind its protected `live` environment,
+which is configured with production credentials. The workflow rejects any proof that does not target
+`https://api.run.cloud`. Camera and microphone jobs are serialized per platform to
+respect mobile fleet capacity, and artifacts are retained even when a stage fails.
