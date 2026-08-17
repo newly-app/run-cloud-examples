@@ -59,6 +59,17 @@ test('fixture generation retains hashes and machine-readable fingerprints', asyn
   assert.equal(mp4.subarray(4, 8).toString('ascii'), 'ftyp');
 });
 
+test('the iOS fixture retries microphone setup until the injected route exists', async () => {
+  const source = await readFile(
+    new URL('../ios-app-screenshot/App/MediaProof.swift', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /format\.sampleRate > 0, format\.channelCount > 0/);
+  assert.match(source, /fail\("MICROPHONE", code: "microphone-format"\)/);
+  assert.match(source, /asyncAfter\(deadline: \.now\(\) \+ \.milliseconds\(250\)\)/);
+  assert.match(source, /self\?\.configureMicrophone\(\)/);
+});
+
 test('native proof status and permission controls are found without platform-specific mocks', () => {
   const tree = {
     screen: { width: 100, height: 200 },

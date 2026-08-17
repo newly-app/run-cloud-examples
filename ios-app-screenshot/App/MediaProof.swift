@@ -237,7 +237,7 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
 
     private func configureMicrophone() {
         captureQueue.async { [weak self] in
-            guard let self else { return }
+            guard let self, self.audioEngine == nil else { return }
             do {
                 let session = AVAudioSession.sharedInstance()
                 try session.setCategory(.record, mode: .measurement)
@@ -246,7 +246,11 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
                 let input = engine.inputNode
                 let format = input.inputFormat(forBus: 0)
                 guard format.sampleRate > 0, format.channelCount > 0 else {
-                    throw MediaProofError("microphone-format")
+                    self.fail("MICROPHONE", code: "microphone-format")
+                    self.captureQueue.asyncAfter(deadline: .now() + .milliseconds(250)) {
+                        [weak self] in self?.configureMicrophone()
+                    }
+                    return
                 }
                 let analyzer = ToneFingerprintAnalyzer(sampleRate: format.sampleRate)
                 self.toneAnalyzer = analyzer
