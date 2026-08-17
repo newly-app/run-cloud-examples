@@ -11,6 +11,8 @@ const retryableAccessibilityCodes = new Set([
   'accessibility_timeout',
 ]);
 
+const iosDeepLinkConfirmationPoint = Object.freeze({ x: 0.69, y: 0.535 });
+
 export function flattenAccessibilityTree(tree) {
   const nodes = [];
   const visit = (node) => {
@@ -63,6 +65,11 @@ export function permissionButton(tree) {
       .filter((value) => typeof value === 'string');
     return labels.some((label) => allowedLabels.some((pattern) => pattern.test(label.trim())));
   }) ?? null;
+}
+
+export function deepLinkConfirmationPoint(platform, status, alreadyTapped) {
+  if (platform !== 'ios' || status !== null || alreadyTapped) return null;
+  return iosDeepLinkConfirmationPoint;
 }
 
 export function normalizedCenter(tree, node) {

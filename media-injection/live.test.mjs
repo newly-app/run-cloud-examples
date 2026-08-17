@@ -16,6 +16,7 @@ import test from 'node:test';
 import { generateFixtures } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
+  deepLinkConfirmationPoint,
   fingerprints,
   isExpectedPreInjectionStatus,
   isRetryableAccessibilityFailure,
@@ -380,6 +381,7 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
   const deadline = Date.now() + APP_READY_TIMEOUT_MS;
   let lastStatus = null;
   let permissionTaps = 0;
+  let deepLinkConfirmationTapped = false;
   let nextKeepAliveAt = Date.now() + 15_000;
   while (Date.now() < deadline) {
     throwIfAborted(signal);
@@ -416,6 +418,22 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
         signal,
       });
       permissionTaps += 1;
+    } else if (deepLinkConfirmationPoint(platform, lastStatus, deepLinkConfirmationTapped)) {
+      // iOS can render the custom-scheme confirmation in a system-owned layer
+      // that is visible in screenshots but omitted from the app-scoped AX tree.
+      // Confirm it through the public input API so the fixture deep link is
+      // delivered on both fresh and previously-used simulator devices.
+      await simulator.tap(
+        sessionId,
+        deepLinkConfirmationPoint(platform, lastStatus, deepLinkConfirmationTapped),
+        {
+          requestId: `media:${mediaRun}:${platform}:${input}:${attempt}:deep-link-confirmation`,
+          timeoutMs: 20_000,
+          signal,
+        },
+      );
+      permissionTaps += 1;
+      deepLinkConfirmationTapped = true;
     }
     await wait(POLL_DELAY_MS, signal);
   }
