@@ -59,15 +59,30 @@ test('fixture generation retains hashes and machine-readable fingerprints', asyn
   assert.equal(mp4.subarray(4, 8).toString('ascii'), 'ftyp');
 });
 
-test('the iOS fixture retries microphone setup until the injected route exists', async () => {
+test('the iOS fixture waits for injection and fingerprints actual microphone callbacks', async () => {
   const source = await readFile(
     new URL('../ios-app-screenshot/App/MediaProof.swift', import.meta.url),
     'utf8',
   );
-  assert.match(source, /format\.sampleRate > 0, format\.channelCount > 0/);
+  assert.match(source, /nativeFormat\.sampleRate > 0 && nativeFormat\.channelCount > 0/);
+  assert.match(source, /environment\["SIMAUDIO_FILE"\]/);
+  assert.match(source, /standardFormatWithSampleRate: 48_000, channels: 1/);
+  assert.match(source, /let callbackRate = buffer\.format\.sampleRate/);
+  assert.match(source, /buffer\.format\.channelCount > 0/);
   assert.match(source, /fail\("MICROPHONE", code: "microphone-format"\)/);
   assert.match(source, /asyncAfter\(deadline: \.now\(\) \+ \.milliseconds\(250\)\)/);
   assert.match(source, /self\?\.configureMicrophone\(\)/);
+});
+
+test('the iOS fixture keeps live media progress out of the accessibility tree', async () => {
+  const source = await readFile(
+    new URL('../ios-app-screenshot/App/MediaProof.swift', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /if !cameraPassed, matchingCameraFrames >= 3/);
+  assert.match(source, /else if !cameraPassed, observedCameraFrames % 10 == 0 \{\s+logProgress\(/);
+  assert.match(source, /if !self\.microphonePassed, observation\.matchedWindows >= 3/);
+  assert.match(source, /else if !self\.microphonePassed, observation\.windows % 4 == 0 \{\s+self\.logProgress\(/);
 });
 
 test('the Android fixture recognizes the full pattern without keeping accessibility busy', async () => {
@@ -98,6 +113,8 @@ test('the live proof replaces only persistently inaccessible simulator sessions'
   assert.match(source, /error\?\.action === 'accessibility'/);
   assert.match(source, /retryable-accessibility-failure/);
   assert.match(source, /sessionRetries/);
+  assert.match(source, /const KEEP_ALIVE_RETRY_DELAYS_MS = \[250, 750\]/);
+  assert.match(source, /isTransientEdgeFailure/);
 });
 
 test('native proof status and permission controls are found without platform-specific mocks', () => {

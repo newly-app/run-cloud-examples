@@ -1,0 +1,18 @@
+{
+  "name": "run-cloud-native-session-proofs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test contract.test.mjs",
+    "test:capabilities": "node --test --test-reporter=tap capabilities.live.test.mjs",
+    "test:expiry": "node --test --test-reporter=tap expiry.live.test.mjs"
+  },
+  "dependencies": {
+    "@run-cloud/sdk": "0.29.0",
+    "runcloud": "0.1.126"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -79,6 +79,8 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
     private var toneAnalyzer: ToneFingerprintAnalyzer?
     private var matchingCameraFrames = 0
     private var observedCameraFrames = 0
+    private var cameraPassed = false
+    private var microphonePassed = false
     private var started = false
 
     init(request: MediaProofRequest) {
@@ -206,13 +208,14 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
         } else {
             matchingCameraFrames = 0
         }
-        if matchingCameraFrames >= 3 {
+        if !cameraPassed, matchingCameraFrames >= 3 {
+            cameraPassed = true
             showStatus(
                 "CAMERA PASS \(Self.cameraFingerprint) attempt=\(request.attempt) "
                     + "frames=\(observedCameraFrames) matches=\(matchingCameraFrames)"
             )
-        } else if observedCameraFrames % 10 == 0 {
-            showStatus(
+        } else if !cameraPassed, observedCameraFrames % 10 == 0 {
+            logProgress(
                 "CAMERA WAIT \(Self.cameraFingerprint) attempt=\(request.attempt) "
                     + "frames=\(observedCameraFrames) colors=\(colors.sorted().joined())"
             )
@@ -244,37 +247,62 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
                 try session.setActive(true)
                 let engine = AVAudioEngine()
                 let input = engine.inputNode
-                let format = input.inputFormat(forBus: 0)
-                guard format.sampleRate > 0, format.channelCount > 0 else {
+                let nativeFormat = input.inputFormat(forBus: 0)
+                let hasNativeFormat = nativeFormat.sampleRate > 0 && nativeFormat.channelCount > 0
+                let hasInjectedAudio = ProcessInfo.processInfo.environment["SIMAUDIO_FILE"]?
+                    .isEmpty == false
+                guard hasNativeFormat || hasInjectedAudio else {
                     self.fail("MICROPHONE", code: "microphone-format")
                     self.captureQueue.asyncAfter(deadline: .now() + .milliseconds(250)) {
                         [weak self] in self?.configureMicrophone()
                     }
                     return
                 }
-                let analyzer = ToneFingerprintAnalyzer(sampleRate: format.sampleRate)
-                self.toneAnalyzer = analyzer
-                input.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-                    guard let self, let observation = analyzer.observe(buffer) else { return }
-                    if observation.matchedWindows >= 3 {
+                guard let tapFormat = hasNativeFormat
+                    ? nativeFormat
+                    : AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)
+                else {
+                    self.fail("MICROPHONE", code: "microphone-format")
+                    return
+                }
+                input.installTap(
+                    onBus: 0,
+                    bufferSize: 4096,
+                    format: hasNativeFormat ? nil : tapFormat
+                ) { [weak self] buffer, _ in
+                    guard let self else { return }
+                    let callbackRate = buffer.format.sampleRate
+                    guard callbackRate > 0, buffer.format.channelCount > 0 else { return }
+                    let analyzer: ToneFingerprintAnalyzer
+                    if let existing = self.toneAnalyzer, existing.sampleRate == callbackRate {
+                        analyzer = existing
+                    } else {
+                        analyzer = ToneFingerprintAnalyzer(sampleRate: callbackRate)
+                        self.toneAnalyzer = analyzer
+                    }
+                    guard let observation = analyzer.observe(buffer) else { return }
+                    if !self.microphonePassed, observation.matchedWindows >= 3 {
+                        self.microphonePassed = true
                         self.showStatus(
                             "MICROPHONE PASS \(Self.audioFingerprint) attempt=\(self.request.attempt) "
                                 + "samples=\(observation.samples) rate=\(Int(observation.sampleRate.rounded())) "
                                 + "measured=\(Int(observation.measuredHz.rounded()))Hz"
                         )
-                    } else if observation.windows % 4 == 0 {
-                        self.showStatus(
+                    } else if !self.microphonePassed, observation.windows % 4 == 0 {
+                        self.logProgress(
                             "MICROPHONE WAIT \(Self.audioFingerprint) attempt=\(self.request.attempt) "
                                 + "samples=\(observation.samples) rms=\(String(format: "%.3f", observation.rms))"
                         )
                     }
                 }
                 self.audioEngine = engine
-                engine.prepare()
-                try engine.start()
+                if hasNativeFormat {
+                    engine.prepare()
+                    try engine.start()
+                }
                 self.showStatus(
                     "MICROPHONE READY \(Self.audioFingerprint) attempt=\(self.request.attempt) "
-                        + "rate=\(Int(format.sampleRate.rounded()))"
+                        + "rate=\(Int(tapFormat.sampleRate.rounded()))"
                 )
             } catch {
                 self.fail("MICROPHONE", code: (error as? MediaProofError)?.code ?? "setup")
@@ -288,6 +316,10 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
             self?.statusLabel.accessibilityLabel = value
             self?.statusLabel.accessibilityValue = value
         }
+    }
+
+    private func logProgress(_ value: String) {
+        NSLog("RunCloudMediaProof %@", value)
     }
 
     private func fail(_ input: String, code: String) {
@@ -375,7 +407,7 @@ private struct ToneObservation {
 }
 
 private final class ToneFingerprintAnalyzer {
-    private let sampleRate: Double
+    let sampleRate: Double
     private var totalSamples = 0
     private var windows = 0
     private var matchedWindows = 0
