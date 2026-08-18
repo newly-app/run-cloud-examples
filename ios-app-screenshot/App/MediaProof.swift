@@ -242,15 +242,17 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
         captureQueue.async { [weak self] in
             guard let self, self.audioEngine == nil else { return }
             do {
+                let hasInjectedAudio = ProcessInfo.processInfo.environment["SIMAUDIO_FILE"]?
+                    .isEmpty == false
                 let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.record, mode: .measurement)
-                try session.setActive(true)
+                if !hasInjectedAudio {
+                    try session.setCategory(.record, mode: .measurement)
+                    try session.setActive(true)
+                }
                 let engine = AVAudioEngine()
                 let input = engine.inputNode
                 let nativeFormat = input.inputFormat(forBus: 0)
                 let hasNativeFormat = nativeFormat.sampleRate > 0 && nativeFormat.channelCount > 0
-                let hasInjectedAudio = ProcessInfo.processInfo.environment["SIMAUDIO_FILE"]?
-                    .isEmpty == false
                 guard hasNativeFormat || hasInjectedAudio else {
                     self.fail("MICROPHONE", code: "microphone-format")
                     self.captureQueue.asyncAfter(deadline: .now() + .milliseconds(250)) {

@@ -68,6 +68,10 @@ test('the iOS fixture waits for injection and fingerprints actual microphone cal
   assert.match(source, /environment\["SIMAUDIO_FILE"\]/);
   assert.match(source, /standardFormatWithSampleRate: 48_000, channels: 1/);
   assert.match(source, /format: hasInjectedAudio \? tapFormat : nil/);
+  assert.match(
+    source,
+    /if !hasInjectedAudio \{\s+try session\.setCategory\(\.record, mode: \.measurement\)\s+try session\.setActive\(true\)/,
+  );
   assert.match(source, /if !hasInjectedAudio \{\s+engine\.prepare\(\)\s+try engine\.start\(\)/);
   assert.match(source, /let callbackRate = buffer\.format\.sampleRate/);
   assert.match(source, /buffer\.format\.channelCount > 0/);
