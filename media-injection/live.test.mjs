@@ -30,6 +30,7 @@ const APP_READY_TIMEOUT_MS = 90_000;
 const APP_PASS_TIMEOUT_MS = 90_000;
 const ACCESSIBILITY_RECOVERY_TIMEOUT_MS = 60_000;
 const MAX_SURFACE_SESSION_ATTEMPTS = 3;
+const KEEP_ALIVE_RETRY_DELAYS_MS = [250, 750];
 const POLL_DELAY_MS = 750;
 const BUNDLE_ID = 'cloud.run.examples.screenshot';
 const platform = oneOfEnvironment('RUN_CLOUD_MEDIA_PLATFORM', ['ios', 'android']);
@@ -480,7 +481,7 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
   while (Date.now() < deadline) {
     throwIfAborted(signal);
     if (Date.now() >= nextKeepAliveAt) {
-      await simulator.keepAlive(sessionId);
+      await keepAliveWithTransientRetry(simulator, sessionId, signal);
       nextKeepAliveAt = Date.now() + 15_000;
     }
     let tree;
@@ -546,6 +547,24 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
   throw new Error(
     `native app did not arm ${input} for attempt ${attempt}; last status: ${lastStatus ?? 'unavailable'}`,
   );
+}
+
+async function keepAliveWithTransientRetry(simulator, sessionId, signal) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await simulator.keepAlive(sessionId);
+    } catch (error) {
+      const failure = asError(error);
+      if (!isTransientEdgeFailure(failure) || attempt >= KEEP_ALIVE_RETRY_DELAYS_MS.length) {
+        throw failure;
+      }
+      await wait(KEEP_ALIVE_RETRY_DELAYS_MS[attempt], signal);
+    }
+  }
+}
+
+function isTransientEdgeFailure(error) {
+  return Number.isInteger(error?.status) && error.status >= 500 && error.status <= 504;
 }
 
 async function waitForAppPass(simulator, sessionId, expectedInput, attempt, signal) {
