@@ -89,8 +89,8 @@ async function runExpiryProof(signal) {
 
     let execClaims = null;
     if (platform === 'ios') {
-      const exec = await stage('exec-ws-valid-before-expiry', async () =>
-        await fetchExecCredential(session, signal));
+      const exec = await stage('session-cookie-mints-bounded-exec-jwt', async () =>
+        await fetchCookieBoundExecCredential(session, signal));
       execCredential = exec;
       execClaims = decodeJwtPayload(exec.credential);
       assert.ok(execClaims && typeof execClaims.exp === 'number',
@@ -101,6 +101,8 @@ async function runExpiryProof(signal) {
         'the iOS exec credential is not bound to the leased lease');
       assert.ok(execClaims.exp * 1_000 <= expiresAtMs + 5_000,
         'the iOS exec credential outlives the session hard expiry');
+      assert.ok(exec.sessionCookieMaxAgeSeconds * 1_000 <= expiresAtMs - Date.now() + 5_000,
+        'the iOS session cookie outlives the session hard expiry');
       const sleepSeconds = Math.max(
         45,
         Math.ceil((execClaims.exp * 1_000 - Date.now()) / 1_000) + 15,
@@ -119,6 +121,8 @@ async function runExpiryProof(signal) {
         jwtExpiresAt: new Date(execClaims.exp * 1_000).toISOString(),
         deviceBound: true,
         leaseBound: true,
+        sessionCookieMaxAgeSeconds: exec.sessionCookieMaxAgeSeconds,
+        cookieBackedCredential: true,
       };
     }
 
@@ -198,6 +202,12 @@ async function runExpiryProof(signal) {
     });
 
     if (platform === 'ios') {
+      const expiredCookieConfig = await stage('expired-session-cookie-cannot-mint-exec-jwt', async () =>
+        await fetchCookieBackedPreviewConfig(execCredential, signal));
+      assert.equal(expiredCookieConfig.status, 401,
+        `expired iOS session cookie returned HTTP ${expiredCookieConfig.status} instead of 401`);
+      evidence.exec.expiredSessionCookieHttpStatus = expiredCookieConfig.status;
+
       const midStream = await stage('exec-ws-open-socket-dies-at-expiry', async () => {
         const result = await midStreamPromise;
         assert.equal(result.ok, true,
@@ -356,17 +366,58 @@ async function waitForReleased(simulator, sessionId, expiresAtMs, signal, sample
   );
 }
 
-async function fetchExecCredential(session, signal) {
+async function fetchCookieBoundExecCredential(session, signal) {
   const location = parseSessionLocation(session);
   const url = new URL(`https://${location.host}/api`);
   url.searchParams.set('token', location.sessionToken);
   url.searchParams.set('device', location.device);
   const response = await fetch(url, { signal });
   assert.equal(response.ok, true, `preview config returned HTTP ${response.status}`);
-  const body = await response.json();
-  assert.equal(typeof body.execToken, 'string', 'preview config omitted execToken');
-  assert.ok(body.execToken.length > 0, 'preview config returned an empty execToken');
-  return { host: location.host, credential: body.execToken };
+  const setCookies = typeof response.headers.getSetCookie === 'function'
+    ? response.headers.getSetCookie()
+    : [response.headers.get('set-cookie')].filter(Boolean);
+  const sessionSetCookie = setCookies.find((value) => value.startsWith('serve_sim_session='));
+  assert.equal(typeof sessionSetCookie, 'string', 'preview config omitted the serve-sim session cookie');
+  const cookieHeader = sessionSetCookie.split(';', 1)[0];
+  const maxAgeMatch = /(?:^|;\s*)Max-Age=(\d+)(?:;|$)/i.exec(sessionSetCookie);
+  assert.ok(maxAgeMatch, 'serve-sim session cookie omitted Max-Age');
+  const sessionCookieMaxAgeSeconds = Number(maxAgeMatch[1]);
+  assert.ok(Number.isInteger(sessionCookieMaxAgeSeconds) && sessionCookieMaxAgeSeconds > 0,
+    'serve-sim session cookie returned an invalid Max-Age');
+
+  const cookieConfig = await fetchCookieBackedPreviewConfig({
+    host: location.host,
+    device: location.device,
+    cookieHeader,
+  }, signal);
+  assert.equal(cookieConfig.status, 200,
+    `session-cookie preview config returned HTTP ${cookieConfig.status}`);
+  assert.equal(typeof cookieConfig.body.execToken, 'string',
+    'session-cookie preview config omitted execToken');
+  assert.ok(cookieConfig.body.execToken.length > 0,
+    'session-cookie preview config returned an empty execToken');
+  return {
+    host: location.host,
+    device: location.device,
+    cookieHeader,
+    credential: cookieConfig.body.execToken,
+    sessionCookieMaxAgeSeconds,
+  };
+}
+
+async function fetchCookieBackedPreviewConfig(exec, signal) {
+  const url = new URL(`https://${exec.host}/api`);
+  url.searchParams.set('device', exec.device);
+  const response = await fetch(url, {
+    headers: { cookie: exec.cookieHeader },
+    redirect: 'manual',
+    signal,
+  });
+  let body = null;
+  if (response.headers.get('content-type')?.includes('application/json')) {
+    body = await response.json();
+  }
+  return { status: response.status, body };
 }
 
 function parseSessionLocation(session) {
