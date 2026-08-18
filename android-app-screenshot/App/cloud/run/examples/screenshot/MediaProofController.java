@@ -21,6 +21,7 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Log;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -34,6 +35,7 @@ final class MediaProofController {
     private static final int MICROPHONE_PERMISSION_REQUEST = 9102;
     private static final String CAMERA_FINGERPRINT = "RCAM-v1:RGBY";
     private static final String AUDIO_FINGERPRINT = "RAUD-v1:1000Hz";
+    private static final String LOG_TAG = "RunCloudMediaProof";
     private static final int AUDIO_SAMPLE_RATE = 48_000;
 
     enum Mode {
@@ -314,7 +316,8 @@ final class MediaProofController {
                         + " layout=" + cameraChromaLayout
                 );
             } else if (!cameraPassed && observedCameraFrames % 10 == 0) {
-                showStatus(
+                Log.d(
+                    LOG_TAG,
                     "CAMERA READY " + CAMERA_FINGERPRINT + " attempt=" + request.attempt
                         + " frames=" + observedCameraFrames + " matches=" + matchingCameraFrames
                         + " colors=" + colorSummary(colors) + " layout=" + cameraChromaLayout
