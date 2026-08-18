@@ -17,7 +17,9 @@ import {
 const READY_TIMEOUT_MS = 180_000;
 const TREE_RETRY_ATTEMPTS = 16;
 const TREE_RETRY_DELAY_MS = 350;
-const PUBLIC_SDK_VERSION = '0.22.0';
+const ACCESSIBILITY_RETRY_ATTEMPTS = 20;
+const ACCESSIBILITY_RETRY_DELAY_MS = 1_500;
+const PUBLIC_SDK_VERSION = '0.29.0';
 const benchmarkRun = safeRunId(requiredEnvironment('RUN_CLOUD_BENCHMARK_RUN_ID'));
 const artifactDirectory = resolve(requiredEnvironment('RUN_CLOUD_BENCHMARK_ARTIFACT_DIR'));
 const requestedPlatform = benchmarkPlatform(process.env.RUN_CLOUD_BENCHMARK_PLATFORM);
@@ -242,7 +244,13 @@ async function waitUntilActive(simulator, initialSession, signal) {
 
 async function revealBenchmark(simulator, platform, sessionId, signal) {
   for (let attempt = 0; attempt < 7; attempt += 1) {
-    const tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    const tree = await accessibilityTreeWithRetry(
+      simulator,
+      platform,
+      sessionId,
+      'initial-reveal',
+      signal,
+    );
     const toggle = findBenchmarkNode(tree, platform, 'toggle');
     if (toggle?.bounds && isVisiblePoint(normalizedCenter(tree, toggle))) return tree;
     await simulator.swipe(
@@ -259,7 +267,13 @@ async function revealBenchmark(simulator, platform, sessionId, signal) {
 async function waitForTreeState(simulator, platform, sessionId, stateName, signal) {
   let lastTree;
   for (let attempt = 0; attempt < TREE_RETRY_ATTEMPTS; attempt += 1) {
-    lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    lastTree = await accessibilityTreeWithRetry(
+      simulator,
+      platform,
+      sessionId,
+      `state-${stateName}`,
+      signal,
+    );
     const toggle = findBenchmarkNode(lastTree, platform, 'toggle');
     const nested = findBenchmarkNode(lastTree, platform, 'nestedLabel');
     const navigate = findBenchmarkNode(lastTree, platform, 'navigate');
@@ -285,6 +299,38 @@ async function waitForTreeState(simulator, platform, sessionId, stateName, signa
     }
   }
   throw new Error(`${platform} did not reach ${stateName}; last status: ${lastStatus}`);
+}
+
+async function accessibilityTreeWithRetry(simulator, platform, sessionId, stageName, signal) {
+  for (let attempt = 1; attempt <= ACCESSIBILITY_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+    } catch (error) {
+      if (!isRetryableAccessibilityUnavailable(error)) throw error;
+      if (attempt === ACCESSIBILITY_RETRY_ATTEMPTS) {
+        const failure = new Error(
+          `${platform} accessibility remained unavailable during ${stageName} after ${attempt} attempts`,
+          { cause: error },
+        );
+        failure.status = error.status;
+        failure.code = error.code;
+        failure.action = error.action;
+        throw failure;
+      }
+      console.log(
+        `${platform} accessibility retry: stage=${stageName}; attempt=${attempt}; `
+        + `nextAttempt=${attempt + 1}`,
+      );
+      await wait(ACCESSIBILITY_RETRY_DELAY_MS, signal);
+    }
+  }
+  throw new Error(`${platform} accessibility retry loop ended unexpectedly during ${stageName}`);
+}
+
+function isRetryableAccessibilityUnavailable(error) {
+  return error instanceof Error
+    && error.status === 503
+    && error.code === 'accessibility_unavailable';
 }
 
 async function writeScreenshot(simulator, platform, sessionId, filename, signal) {

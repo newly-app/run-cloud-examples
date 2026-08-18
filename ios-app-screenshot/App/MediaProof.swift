@@ -268,7 +268,7 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
                 input.installTap(
                     onBus: 0,
                     bufferSize: 4096,
-                    format: hasNativeFormat ? nil : tapFormat
+                    format: hasInjectedAudio ? tapFormat : nil
                 ) { [weak self] buffer, _ in
                     guard let self else { return }
                     let callbackRate = buffer.format.sampleRate
@@ -296,7 +296,7 @@ final class MediaProofViewController: UIViewController, AVCaptureVideoDataOutput
                     }
                 }
                 self.audioEngine = engine
-                if hasNativeFormat {
+                if !hasInjectedAudio {
                     engine.prepare()
                     try engine.start()
                 }

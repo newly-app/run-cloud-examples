@@ -70,7 +70,7 @@ test('the live suite uses only the published SDK surface and owns cleanup artifa
     readFile(new URL('accessibility-benchmark/live.test.mjs', repositoryRoot), 'utf8'),
   ]);
   const packageJson = JSON.parse(manifest);
-  assert.equal(packageJson.dependencies['@run-cloud/sdk'], '0.22.0');
+  assert.equal(packageJson.dependencies['@run-cloud/sdk'], '0.29.0');
   assert.match(source, /import \{ Client \} from '@run-cloud\/sdk'/);
   assert.match(source, /simulator\.create/);
   assert.match(source, /simulator\.accessibilityTree/);
@@ -78,6 +78,9 @@ test('the live suite uses only the published SDK surface and owns cleanup artifa
   assert.match(source, /simulator\.delete/);
   assert.match(source, /cloud\.assets\.delete/);
   assert.match(source, /-cleanup\.json/);
+  assert.match(source, /accessibilityTreeWithRetry/);
+  assert.match(source, /accessibility_unavailable/);
+  assert.match(source, /stage=\$\{stageName\}/);
   assert.doesNotMatch(source, /fetch\s*\(/);
 });
 
