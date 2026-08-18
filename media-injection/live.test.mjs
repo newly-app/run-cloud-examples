@@ -28,6 +28,8 @@ import {
 const SESSION_READY_TIMEOUT_MS = 180_000;
 const APP_READY_TIMEOUT_MS = 90_000;
 const APP_PASS_TIMEOUT_MS = 90_000;
+const ACCESSIBILITY_RECOVERY_TIMEOUT_MS = 60_000;
+const MAX_SURFACE_SESSION_ATTEMPTS = 3;
 const POLL_DELAY_MS = 750;
 const BUNDLE_ID = 'cloud.run.examples.screenshot';
 const platform = oneOfEnvironment('RUN_CLOUD_MEDIA_PLATFORM', ['ios', 'android']);
@@ -77,6 +79,7 @@ async function runMediaProof(signal) {
   const sessions = [];
   const assetIds = new Set();
   const cleanup = [];
+  const sessionRetries = [];
   let operationError;
 
   try {
@@ -104,6 +107,11 @@ async function runMediaProof(signal) {
         arch: process.env.RUNNER_ARCH ?? process.arch,
         imageOs: process.env.ImageOS ?? null,
         imageVersion: process.env.ImageVersion ?? null,
+      },
+      sessionRetryPolicy: {
+        maxAttemptsPerSurface: MAX_SURFACE_SESSION_ATTEMPTS,
+        accessibilityRecoveryTimeoutMs: ACCESSIBILITY_RECOVERY_TIMEOUT_MS,
+        retryableCode: 'media_session_accessibility_unavailable',
       },
       github: {
         repository: process.env.GITHUB_REPOSITORY ?? null,
@@ -137,110 +145,193 @@ async function runMediaProof(signal) {
 
     const surfaceResults = [];
     for (const surface of ['sdk', 'cli']) {
-      throwIfAborted(signal);
-      const attempt = safeRunId(`${surface}-${mediaRun}`).slice(0, 48);
-      let session = await stage(`${surface}-session-create`, async () =>
-        await simulator.create({
-          displayName: `regression:${mediaRun}:${platform}:media-${input}-${surface}`,
-          tags: {
-            suite: 'native-media-injection',
-            mediaRun,
-            platform,
-            input,
+      let surfacePassed = false;
+      for (let sessionAttempt = 1;
+           sessionAttempt <= MAX_SURFACE_SESSION_ATTEMPTS;
+           sessionAttempt += 1) {
+        throwIfAborted(signal);
+        const stagePrefix = sessionAttempt === 1
+          ? surface
+          : `${surface}-retry-${sessionAttempt}`;
+        const attempt = safeRunId(`${surface}-r${sessionAttempt}-${mediaRun}`).slice(0, 48);
+        let session;
+        let acknowledgement;
+        try {
+          session = await stage(`${stagePrefix}-session-create`, async () =>
+            await simulator.create({
+              displayName: `regression:${mediaRun}:${platform}:media-${input}-${surface}-r${sessionAttempt}`,
+              tags: {
+                suite: 'native-media-injection',
+                mediaRun,
+                platform,
+                input,
+                surface,
+                sessionAttempt: String(sessionAttempt),
+                'regression.suite': 'simulator-infra',
+                'regression.run': mediaRun,
+                'regression.test': `media-${input}-${surface}`,
+              },
+              installAssets: [appAsset.id],
+              inactivityTimeout: '3m',
+              hardTimeout: '12m',
+            }));
+          sessions.push({ surface, simulator, session, sessionAttempt });
+          session = await stage(`${stagePrefix}-session-ready`, async () =>
+            await waitUntilActive(simulator, session, signal));
+          sessions.at(-1).session = session;
+          await writeJson(`${stagePrefix}-session.json`, {
+            id: session.id,
+            platform: session.platform,
+            status: session.status,
+            inactivityTimeoutSeconds: session.inactivityTimeoutSeconds ?? null,
+            inactivityCountdownSeconds: session.inactivityCountdownSeconds ?? null,
+            createdAt: session.createdAt,
+            expiresAt: session.expiresAt ?? null,
+          });
+
+          const deepLink = `runcloudproof://media/${input}?attempt=${encodeURIComponent(attempt)}`;
+          await stage(`${stagePrefix}-app-open`, async () =>
+            await simulator.openUrl(session.id, deepLink));
+          const armed = await stage(`${stagePrefix}-app-arm`, async () =>
+            await waitForAppReady(simulator, session.id, attempt, signal));
+          await writeJson(`${stagePrefix}-tree-armed.json`, armed.tree);
+
+          if (surface === 'sdk') {
+            acknowledgement = await stage(`${stagePrefix}-media-inject`, async () => {
+              const blob = new Blob([mediaBytes], { type: mediaManifest.contentType });
+              const options = {
+                bundleId: BUNDLE_ID,
+                filename: mediaManifest.filename,
+                name: `media-proof-${mediaRun}-${platform}-${input}-sdk-r${sessionAttempt}`,
+              };
+              return input === 'camera'
+                ? await simulator.uploadCameraVideo(session.id, blob, options)
+                : await simulator.uploadMicrophoneAudio(session.id, blob, options);
+            });
+          } else {
+            acknowledgement = await stage(`${stagePrefix}-media-inject`, async () =>
+              await invokeCli([
+                platform,
+                input,
+                'inject',
+                session.id,
+                mediaPath,
+                '--bundle-id',
+                BUNDLE_ID,
+                '--name',
+                `media-proof-${mediaRun}-${platform}-${input}-cli-r${sessionAttempt}`,
+                '--json',
+              ], signal));
+          }
+          validateAcknowledgement(acknowledgement, surface, session.id, mediaManifest);
+          assetIds.add(acknowledgement.asset.id);
+          await writeJson(
+            `${stagePrefix}-injection-response.json`,
+            acknowledgementEvidence(acknowledgement),
+          );
+
+          const passed = await stage(`${stagePrefix}-app-fingerprint`, async () =>
+            await waitForAppPass(simulator, session.id, input, attempt, signal));
+          await writeJson(`${stagePrefix}-tree-pass.json`, passed.tree);
+          await stage(`${stagePrefix}-screenshot`, async () =>
+            await writeScreenshot(simulator, session.id, `${stagePrefix}-pass.png`, signal));
+          const logs = await stage(`${stagePrefix}-logs`, async () =>
+            await simulator.logs(session.id, { tail: 300 }));
+          await writeJson(`${stagePrefix}-simulator-logs.json`, logs);
+          surfaceResults.push({
             surface,
-            'regression.suite': 'simulator-infra',
-            'regression.run': mediaRun,
-            'regression.test': `media-${input}-${surface}`,
-          },
-          installAssets: [appAsset.id],
-          inactivityTimeout: '3m',
-          hardTimeout: '12m',
-        }));
-      sessions.push({ surface, simulator, session });
-      session = await stage(`${surface}-session-ready`, async () =>
-        await waitUntilActive(simulator, session, signal));
-      sessions.at(-1).session = session;
-      await writeJson(`${surface}-session.json`, {
-        id: session.id,
-        platform: session.platform,
-        status: session.status,
-        inactivityTimeoutSeconds: session.inactivityTimeoutSeconds ?? null,
-        inactivityCountdownSeconds: session.inactivityCountdownSeconds ?? null,
-        createdAt: session.createdAt,
-        expiresAt: session.expiresAt ?? null,
-      });
+            attempt,
+            sessionAttempt,
+            sessionId: session.id,
+            fingerprint: fingerprints[input],
+            appStatus: passed.status,
+            outcome: 'passed',
+          });
 
-      const deepLink = `runcloudproof://media/${input}?attempt=${encodeURIComponent(attempt)}`;
-      await stage(`${surface}-app-open`, async () =>
-        await simulator.openUrl(session.id, deepLink));
-      const armed = await stage(`${surface}-app-arm`, async () =>
-        await waitForAppReady(simulator, session.id, attempt, signal));
-      await writeJson(`${surface}-tree-armed.json`, armed.tree);
-
-      let acknowledgement;
-      if (surface === 'sdk') {
-        acknowledgement = await stage('sdk-media-inject', async () => {
-          const blob = new Blob([mediaBytes], { type: mediaManifest.contentType });
-          const options = {
-            bundleId: BUNDLE_ID,
-            filename: mediaManifest.filename,
-            name: `media-proof-${mediaRun}-${platform}-${input}-sdk`,
-          };
-          return input === 'camera'
-            ? await simulator.uploadCameraVideo(session.id, blob, options)
-            : await simulator.uploadMicrophoneAudio(session.id, blob, options);
-        });
-      } else {
-        acknowledgement = await stage('cli-media-inject', async () =>
-          await invokeCli([
+          await stage(`${stagePrefix}-session-release`, async () => {
+            await simulator.delete(session.id);
+            cleanup.push({ resource: 'session', surface, id: session.id, outcome: 'released' });
+            removeSession(sessions, session.id);
+          });
+          await stage(`${stagePrefix}-media-asset-delete`, async () => {
+            await cloud.assets.delete(acknowledgement.asset.id);
+            cleanup.push({
+              resource: 'asset',
+              surface,
+              id: acknowledgement.asset.id,
+              outcome: 'deleted',
+            });
+            assetIds.delete(acknowledgement.asset.id);
+          });
+          surfacePassed = true;
+          break;
+        } catch (error) {
+          const sessionError = asError(error);
+          if (!isRetryableSessionError(sessionError)
+              || sessionAttempt >= MAX_SURFACE_SESSION_ATTEMPTS
+              || !session) {
+            throw sessionError;
+          }
+          const failureStage = currentStage;
+          const retained = sessions.find((item) => item.session.id === session.id);
+          const retryDiagnostics = retained
+            ? await collectFailureEvidence([retained], failureStage)
+            : [];
+          const diagnosticsFile = `${stagePrefix}-retry-diagnostics.json`;
+          await writeJson(diagnosticsFile, {
+            schemaVersion: 1,
             platform,
             input,
-            'inject',
-            session.id,
-            mediaPath,
-            '--bundle-id',
-            BUNDLE_ID,
-            '--name',
-            `media-proof-${mediaRun}-${platform}-${input}-cli`,
-            '--json',
-          ], signal));
+            mediaRun,
+            surface,
+            sessionAttempt,
+            failureStage,
+            failure: sanitizedFailure(sessionError),
+            sessions: retryDiagnostics,
+          });
+          sessionRetries.push({
+            surface,
+            sessionAttempt,
+            sessionId: session.id,
+            failureStage,
+            failure: sanitizedFailure(sessionError),
+            diagnostics: diagnosticsFile,
+            outcome: 'retried-with-fresh-session',
+          });
+          await writeJson('session-retries.json', {
+            schemaVersion: 1,
+            platform,
+            input,
+            mediaRun,
+            retries: sessionRetries,
+          });
+          await stage(`${stagePrefix}-retry-session-release`, async () => {
+            await simulator.delete(session.id);
+            cleanup.push({
+              resource: 'session',
+              surface,
+              id: session.id,
+              outcome: 'released',
+              reason: 'retryable-accessibility-failure',
+            });
+            removeSession(sessions, session.id);
+          });
+          if (acknowledgement?.asset?.id) {
+            await stage(`${stagePrefix}-retry-media-asset-delete`, async () => {
+              await cloud.assets.delete(acknowledgement.asset.id);
+              cleanup.push({
+                resource: 'asset',
+                surface,
+                id: acknowledgement.asset.id,
+                outcome: 'deleted',
+                reason: 'retryable-accessibility-failure',
+              });
+              assetIds.delete(acknowledgement.asset.id);
+            });
+          }
+        }
       }
-      validateAcknowledgement(acknowledgement, surface, session.id, mediaManifest);
-      assetIds.add(acknowledgement.asset.id);
-      await writeJson(`${surface}-injection-response.json`, acknowledgementEvidence(acknowledgement));
-
-      const passed = await stage(`${surface}-app-fingerprint`, async () =>
-        await waitForAppPass(simulator, session.id, input, attempt, signal));
-      await writeJson(`${surface}-tree-pass.json`, passed.tree);
-      await stage(`${surface}-screenshot`, async () =>
-        await writeScreenshot(simulator, session.id, `${surface}-pass.png`, signal));
-      const logs = await stage(`${surface}-logs`, async () =>
-        await simulator.logs(session.id, { tail: 300 }));
-      await writeJson(`${surface}-simulator-logs.json`, logs);
-      surfaceResults.push({
-        surface,
-        attempt,
-        sessionId: session.id,
-        fingerprint: fingerprints[input],
-        appStatus: passed.status,
-        outcome: 'passed',
-      });
-
-      await stage(`${surface}-session-release`, async () => {
-        await simulator.delete(session.id);
-        cleanup.push({ resource: 'session', surface, id: session.id, outcome: 'released' });
-        sessions.splice(sessions.findIndex((item) => item.session.id === session.id), 1);
-      });
-      await stage(`${surface}-media-asset-delete`, async () => {
-        await cloud.assets.delete(acknowledgement.asset.id);
-        cleanup.push({
-          resource: 'asset',
-          surface,
-          id: acknowledgement.asset.id,
-          outcome: 'deleted',
-        });
-        assetIds.delete(acknowledgement.asset.id);
-      });
+      assert.equal(surfacePassed, true, `${surface} did not complete a media proof`);
     }
 
     await writeJson('result.json', {
@@ -251,6 +342,7 @@ async function runMediaProof(signal) {
       packages: packageEvidence,
       fingerprint: fingerprints[input],
       surfaces: surfaceResults,
+      sessionRetries,
       outcome: 'passed',
     });
   } catch (error) {
@@ -380,6 +472,8 @@ async function waitUntilActive(simulator, initialSession, signal) {
 async function waitForAppReady(simulator, sessionId, attempt, signal) {
   const deadline = Date.now() + APP_READY_TIMEOUT_MS;
   let lastStatus = null;
+  let accessibilityUnavailableSince = null;
+  let lastAccessibilityError = null;
   let permissionTaps = 0;
   let deepLinkConfirmationTapped = false;
   let nextKeepAliveAt = Date.now() + 15_000;
@@ -394,9 +488,16 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
       tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     } catch (error) {
       if (!isRetryableAccessibilityFailure(error)) throw error;
+      lastAccessibilityError = asError(error);
+      accessibilityUnavailableSince ??= Date.now();
+      if (Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
+        throw retryableAccessibilitySessionError('arming the native app', lastAccessibilityError);
+      }
       await wait(POLL_DELAY_MS, signal);
       continue;
     }
+    accessibilityUnavailableSince = null;
+    lastAccessibilityError = null;
     lastStatus = mediaStatus(tree) ?? lastStatus;
     if (isExpectedPreInjectionStatus(lastStatus, { platform, input, attempt })) {
       return { tree, status: lastStatus, permissionTaps };
@@ -437,6 +538,11 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
     }
     await wait(POLL_DELAY_MS, signal);
   }
+  if (lastAccessibilityError
+      && accessibilityUnavailableSince
+      && Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
+    throw retryableAccessibilitySessionError('arming the native app', lastAccessibilityError);
+  }
   throw new Error(
     `native app did not arm ${input} for attempt ${attempt}; last status: ${lastStatus ?? 'unavailable'}`,
   );
@@ -446,6 +552,8 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
   const deadline = Date.now() + APP_PASS_TIMEOUT_MS;
   let lastTree;
   let lastStatus = null;
+  let accessibilityUnavailableSince = null;
+  let lastAccessibilityError = null;
   let permissionTaps = 0;
   let nextKeepAliveAt = Date.now();
   while (Date.now() < deadline) {
@@ -458,12 +566,22 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
       lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
     } catch (error) {
       if (isRetryableAccessibilityFailure(error)) {
+        lastAccessibilityError = asError(error);
+        accessibilityUnavailableSince ??= Date.now();
+        if (Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
+          throw retryableAccessibilitySessionError(
+            'reading the native fingerprint',
+            lastAccessibilityError,
+          );
+        }
         await wait(POLL_DELAY_MS, signal);
         continue;
       }
       if (lastTree) await writeJson(`${attempt}-last-tree-before-poll-error.json`, lastTree);
       throw error;
     }
+    accessibilityUnavailableSince = null;
+    lastAccessibilityError = null;
     lastStatus = mediaStatus(lastTree) ?? lastStatus;
     if (lastStatus?.includes(' FAIL ') && !isExpectedPreInjectionStatus(lastStatus, {
       platform,
@@ -488,6 +606,14 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     await wait(POLL_DELAY_MS, signal);
   }
   if (lastTree) await writeJson('last-tree-before-timeout.json', lastTree);
+  if (lastAccessibilityError
+      && accessibilityUnavailableSince
+      && Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
+    throw retryableAccessibilitySessionError(
+      'reading the native fingerprint',
+      lastAccessibilityError,
+    );
+  }
   throw new Error(
     `native app did not report ${fingerprints[expectedInput]} for attempt ${attempt}; `
       + `last status: ${lastStatus ?? 'unavailable'}`,
@@ -637,6 +763,32 @@ async function writeJson(filename, value) {
     `${JSON.stringify(value, null, 2)}\n`,
     'utf8',
   );
+}
+
+function retryableAccessibilitySessionError(phase, cause) {
+  const error = new Error(
+    `simulator accessibility remained unavailable for ${ACCESSIBILITY_RECOVERY_TIMEOUT_MS} ms while ${phase}; replacing the session`,
+    { cause },
+  );
+  error.name = 'RetryableSessionError';
+  error.code = 'media_session_accessibility_unavailable';
+  error.action = 'accessibility';
+  error.retryable = true;
+  if (Number.isInteger(cause.status)) error.status = cause.status;
+  if (typeof cause.platform === 'string') error.platform = cause.platform;
+  if (typeof cause.sessionId === 'string') error.sessionId = cause.sessionId;
+  return error;
+}
+
+function isRetryableSessionError(error) {
+  return error?.retryable === true
+    && error?.code === 'media_session_accessibility_unavailable'
+    && error?.action === 'accessibility';
+}
+
+function removeSession(sessions, sessionId) {
+  const index = sessions.findIndex((item) => item.session.id === sessionId);
+  if (index >= 0) sessions.splice(index, 1);
 }
 
 function moduleSpecifier(value) {

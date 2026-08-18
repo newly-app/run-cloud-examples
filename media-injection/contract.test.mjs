@@ -70,7 +70,7 @@ test('the iOS fixture retries microphone setup until the injected route exists',
   assert.match(source, /self\?\.configureMicrophone\(\)/);
 });
 
-test('the Android fixture recognizes the full pattern after external-camera transforms', async () => {
+test('the Android fixture recognizes the full pattern without keeping accessibility busy', async () => {
   const source = await readFile(
     new URL(
       '../android-app-screenshot/App/cloud/run/examples/screenshot/MediaProofController.java',
@@ -84,6 +84,20 @@ test('the Android fixture recognizes the full pattern after external-camera tran
   assert.match(source, /colors\.contains\("B"\)/);
   assert.match(source, /colors\.contains\("Y"\)/);
   assert.match(source, /matchingCameraFrames >= 3/);
+  assert.match(
+    source,
+    /else if \(!cameraPassed && observedCameraFrames % 10 == 0\) \{\s+Log\.d\(/,
+  );
+});
+
+test('the live proof replaces only persistently inaccessible simulator sessions', async () => {
+  const source = await readFile(new URL('./live.test.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const ACCESSIBILITY_RECOVERY_TIMEOUT_MS = 60_000/);
+  assert.match(source, /const MAX_SURFACE_SESSION_ATTEMPTS = 3/);
+  assert.match(source, /error\?\.code === 'media_session_accessibility_unavailable'/);
+  assert.match(source, /error\?\.action === 'accessibility'/);
+  assert.match(source, /retryable-accessibility-failure/);
+  assert.match(source, /sessionRetries/);
 });
 
 test('native proof status and permission controls are found without platform-specific mocks', () => {

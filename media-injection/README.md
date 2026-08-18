@@ -69,6 +69,10 @@ session and deletes every app/media asset. Its retained evidence includes:
 - SDK and CLI acknowledgements without signed URLs;
 - armed and passing native accessibility trees;
 - passing PNG screenshots and bounded simulator logs;
+- `session-retries.json` and per-attempt diagnostics when a host accessibility
+  endpoint remains explicitly retryable for 60 seconds; the harness uses at most
+  three fresh sessions per public surface and never retries a native fingerprint
+  mismatch or app-reported failure;
 - `result.json`, `failure.json` when needed, and `cleanup.json`.
 
 The repository's `Test examples` workflow builds the apps from source and exposes a
