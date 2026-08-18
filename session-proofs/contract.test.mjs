@@ -24,6 +24,8 @@ test('expiry proof crosses the stated deadline and observes both SDK and CLI ter
   assert.match(source, /sdkFailure\.status, 404/);
   assert.match(source, /public-meter-stops-at-expiry/);
   assert.match(source, /assert\.equal\(second, first/);
+  assert.match(source, /session-cookie-mints-bounded-exec-jwt/);
+  assert.match(source, /expired-session-cookie-cannot-mint-exec-jwt/);
   assert.match(source, /exec-ws-open-socket-dies-at-expiry/);
   assert.match(source, /exec-ws-expired-handshake-rejected/);
   assert.doesNotMatch(source, /fake|mock/i);

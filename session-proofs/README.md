@@ -9,9 +9,10 @@ session behavior that cannot be established with a fake simulator fleet:
 - `expiry.live.test.mjs` creates a 90-second session, proves that SDK and CLI
   both see it active immediately before `expiresAt`, waits through the stated
   hard timeout, and requires both surfaces to see an automatic release. It
-  also proves that the public usage meter stops increasing. On iOS it holds an
-  authenticated exec WebSocket across expiry and verifies both the open socket
-  and a new handshake reject the expired JWT.
+  also proves that the public usage meter stops increasing. On iOS it bootstraps
+  a session cookie, proves that cookie can mint only a lease-bounded exec JWT,
+  holds an authenticated exec WebSocket across expiry, and verifies the expired
+  cookie, open socket, and a new handshake are all rejected.
 
 The workflow installs the selected public `@run-cloud/sdk` and `runcloud`
 versions rather than importing repository internals. No fake or mocked
@@ -39,7 +40,7 @@ npm run test:expiry
 
 Each stage is appended to `stages.jsonl`. Successful capability runs retain
 SDK and CLI PNG/MP4 files plus recording metadata. Expiry runs retain the
-pre-expiry and terminal state observations, usage samples, and sanitized exec
-expiry outcomes. Every run writes `result.json` or `failure.json` and a
+pre-expiry and terminal state observations, usage samples, and sanitized cookie
+and exec-expiry outcomes. Every run writes `result.json` or `failure.json` and a
 `cleanup.json` resource ledger. Signed session URLs, API keys, and exec JWTs
 are never written to artifacts.
