@@ -31,7 +31,7 @@ const APP_READY_TIMEOUT_MS = 90_000;
 const APP_PASS_TIMEOUT_MS = 90_000;
 const ACCESSIBILITY_RECOVERY_TIMEOUT_MS = 60_000;
 const MAX_SURFACE_SESSION_ATTEMPTS = 3;
-const KEEP_ALIVE_RETRY_DELAYS_MS = [250, 750];
+const TRANSIENT_EDGE_RETRY_DELAYS_MS = [250, 750, 1_500];
 const POLL_DELAY_MS = 750;
 const BUNDLE_ID = 'cloud.run.examples.screenshot';
 const platform = oneOfEnvironment('RUN_CLOUD_MEDIA_PLATFORM', ['ios', 'android']);
@@ -238,7 +238,10 @@ async function runMediaProof(signal) {
           await stage(`${stagePrefix}-screenshot`, async () =>
             await writeScreenshot(simulator, session.id, `${stagePrefix}-pass.png`, signal));
           const logs = await stage(`${stagePrefix}-logs`, async () =>
-            await simulator.logs(session.id, { tail: 300 }));
+            await withTransientEdgeRetry(
+              () => simulator.logs(session.id, { tail: 300 }),
+              signal,
+            ));
           await writeJson(`${stagePrefix}-simulator-logs.json`, logs);
           surfaceResults.push({
             surface,
@@ -555,15 +558,20 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
 }
 
 async function keepAliveWithTransientRetry(simulator, sessionId, signal) {
+  return await withTransientEdgeRetry(() => simulator.keepAlive(sessionId), signal);
+}
+
+async function withTransientEdgeRetry(operation, signal) {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await simulator.keepAlive(sessionId);
+      return await operation();
     } catch (error) {
       const failure = asError(error);
-      if (!isTransientEdgeFailure(failure) || attempt >= KEEP_ALIVE_RETRY_DELAYS_MS.length) {
+      if (!isTransientEdgeFailure(failure)
+          || attempt >= TRANSIENT_EDGE_RETRY_DELAYS_MS.length) {
         throw failure;
       }
-      await wait(KEEP_ALIVE_RETRY_DELAYS_MS[attempt], signal);
+      await wait(TRANSIENT_EDGE_RETRY_DELAYS_MS[attempt], signal);
     }
   }
 }
