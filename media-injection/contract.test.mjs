@@ -14,6 +14,7 @@ import {
 } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
+  boundedRequestId,
   deepLinkConfirmationPoint,
   isExpectedPreInjectionStatus,
   isRetryableAccessibilityFailure,
@@ -21,6 +22,31 @@ import {
   normalizedCenter,
   permissionButton,
 } from './proof-contract.mjs';
+
+test('interaction request IDs stay valid and unique at the public SDK boundary', () => {
+  const first = boundedRequestId(
+    'media',
+    'a'.repeat(64),
+    'ios',
+    'microphone',
+    'cli-r3-b'.repeat(8),
+    'post-injection-permission',
+    0,
+  );
+  const second = boundedRequestId(
+    'media',
+    'a'.repeat(64),
+    'ios',
+    'microphone',
+    'cli-r3-b'.repeat(8),
+    'post-injection-permission',
+    1,
+  );
+  assert.equal(first.length, 128);
+  assert.match(first, /^[A-Za-z0-9._:-]{1,128}$/);
+  assert.notEqual(first, second);
+  assert.equal(boundedRequestId('media', 'short', 'tap'), 'media:short:tap');
+});
 
 test('the WAV fixture contains the documented 1 kHz mono samples', () => {
   const wav = toneWav();
