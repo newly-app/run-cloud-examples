@@ -594,7 +594,7 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
   while (Date.now() < deadline) {
     throwIfAborted(signal);
     if (Date.now() >= nextKeepAliveAt) {
-      await simulator.keepAlive(sessionId);
+      await keepAliveWithTransientRetry(simulator, sessionId, signal);
       nextKeepAliveAt = Date.now() + 15_000;
     }
     try {
