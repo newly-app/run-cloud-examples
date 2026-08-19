@@ -18,6 +18,7 @@ import {
   deepLinkConfirmationPoint,
   isExpectedPreInjectionStatus,
   isRetryableAccessibilityFailure,
+  isRetryableAccessibilityReadFailure,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -46,6 +47,17 @@ test('interaction request IDs stay valid and unique at the public SDK boundary',
   assert.match(first, /^[A-Za-z0-9._:-]{1,128}$/);
   assert.notEqual(first, second);
   assert.equal(boundedRequestId('media', 'short', 'tap'), 'media:short:tap');
+});
+
+test('accessibility read recovery includes exhausted edge failures without retrying auth', () => {
+  assert.equal(isRetryableAccessibilityReadFailure({ status: 502 }), true);
+  assert.equal(isRetryableAccessibilityReadFailure({
+    retryable: true,
+    code: 'accessibility_timeout',
+    action: 'accessibility',
+  }), true);
+  assert.equal(isRetryableAccessibilityReadFailure({ status: 401 }), false);
+  assert.equal(isRetryableAccessibilityReadFailure({ status: 429 }), false);
 });
 
 test('the WAV fixture contains the documented 1 kHz mono samples', () => {
@@ -151,6 +163,7 @@ test('the live proof replaces only persistently inaccessible simulator sessions'
     source,
     /waitForAppReady[\s\S]*withTransientEdgeRetry\(\s*\(\) => simulator\.accessibilityTree\(sessionId/,
   );
+  assert.match(source, /if \(!isRetryableAccessibilityReadFailure\(error\)\) throw error/);
   assert.match(
     source,
     /waitForAppPass[\s\S]*withTransientEdgeRetry\(\s*\(\) => simulator\.accessibilityTree\(sessionId[\s\S]*toUpperCase\(\)} PASS[\s\S]*keepAliveWithTransientRetry\(simulator, sessionId, signal\)/,

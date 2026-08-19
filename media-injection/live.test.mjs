@@ -20,7 +20,7 @@ import {
   deepLinkConfirmationPoint,
   fingerprints,
   isExpectedPreInjectionStatus,
-  isRetryableAccessibilityFailure,
+  isRetryableAccessibilityReadFailure,
   mediaStatus,
   normalizedCenter,
   permissionButton,
@@ -498,7 +498,7 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
         signal,
       );
     } catch (error) {
-      if (!isRetryableAccessibilityFailure(error)) throw error;
+      if (!isRetryableAccessibilityReadFailure(error)) throw error;
       lastAccessibilityError = asError(error);
       accessibilityUnavailableSince ??= Date.now();
       if (Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
@@ -604,7 +604,7 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
       );
       lastTree = currentTree;
     } catch (error) {
-      if (isRetryableAccessibilityFailure(error)) {
+      if (isRetryableAccessibilityReadFailure(error)) {
         lastAccessibilityError = asError(error);
         accessibilityUnavailableSince ??= Date.now();
         if (Date.now() - accessibilityUnavailableSince >= ACCESSIBILITY_RECOVERY_TIMEOUT_MS) {
