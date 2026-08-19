@@ -145,8 +145,9 @@ test('the live proof replaces only persistently inaccessible simulator sessions'
   assert.match(source, /error\?\.action === 'accessibility'/);
   assert.match(source, /retryable-accessibility-failure/);
   assert.match(source, /sessionRetries/);
-  assert.match(source, /const KEEP_ALIVE_RETRY_DELAYS_MS = \[250, 750\]/);
+  assert.match(source, /const TRANSIENT_EDGE_RETRY_DELAYS_MS = \[250, 750, 1_500\]/);
   assert.match(source, /isTransientEdgeFailure/);
+  assert.match(source, /withTransientEdgeRetry\(\s+\(\) => simulator\.logs/);
 });
 
 test('native proof status and permission controls are found without platform-specific mocks', () => {
