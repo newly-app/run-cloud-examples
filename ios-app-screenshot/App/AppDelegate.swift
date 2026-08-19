@@ -151,10 +151,10 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         content.spacing = 9
         content.translatesAutoresizingMaskIntoConstraints = false
 
-        let page = UIScrollView()
+        let page = ProofScrollView()
         page.alwaysBounceVertical = false
         page.delaysContentTouches = false
-        page.canCancelContentTouches = false
+        page.canCancelContentTouches = true
         page.keyboardDismissMode = .interactive
         page.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(page)
@@ -530,5 +530,14 @@ final class GestureProofView: UILabel {
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         onState?("cancelled")
+    }
+}
+
+final class ProofScrollView: UIScrollView {
+    override func touchesShouldCancel(in view: UIView) -> Bool {
+        if view is GestureProofView {
+            return false
+        }
+        return super.touchesShouldCancel(in: view)
     }
 }

@@ -41,9 +41,12 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /accessibilityIdentifier = "navigate-button"/);
   assert.match(source, /accessibilityContainerType = \.semanticGroup/);
   assert.match(source, /override var keyCommands/);
-  assert.match(source, /let page = UIScrollView\(\)/);
+  assert.match(source, /let page = ProofScrollView\(\)/);
   assert.match(source, /page\.delaysContentTouches = false/);
-  assert.match(source, /page\.canCancelContentTouches = false/);
+  assert.match(source, /page\.canCancelContentTouches = true/);
+  assert.match(source, /final class ProofScrollView: UIScrollView/);
+  assert.match(source, /if view is GestureProofView[\s\S]*return false/);
+  assert.match(source, /return super\.touchesShouldCancel\(in: view\)/);
   assert.match(source, /page\.contentLayoutGuide/);
   assert.match(plist, /UIInterfaceOrientationLandscapeLeft/);
   assert.match(plist, /UIInterfaceOrientationLandscapeRight/);
