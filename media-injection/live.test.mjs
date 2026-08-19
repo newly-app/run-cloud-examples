@@ -493,7 +493,10 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
     }
     let tree;
     try {
-      tree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+      tree = await withTransientEdgeRetry(
+        () => simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal }),
+        signal,
+      );
     } catch (error) {
       if (!isRetryableAccessibilityFailure(error)) throw error;
       lastAccessibilityError = asError(error);
@@ -595,7 +598,10 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     throwIfAborted(signal);
     let currentTree;
     try {
-      currentTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+      currentTree = await withTransientEdgeRetry(
+        () => simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal }),
+        signal,
+      );
       lastTree = currentTree;
     } catch (error) {
       if (isRetryableAccessibilityFailure(error)) {

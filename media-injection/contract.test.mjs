@@ -149,7 +149,11 @@ test('the live proof replaces only persistently inaccessible simulator sessions'
   assert.match(source, /isTransientEdgeFailure/);
   assert.match(
     source,
-    /waitForAppPass[\s\S]*accessibilityTree\(sessionId[\s\S]*toUpperCase\(\)} PASS[\s\S]*keepAliveWithTransientRetry\(simulator, sessionId, signal\)/,
+    /waitForAppReady[\s\S]*withTransientEdgeRetry\(\s*\(\) => simulator\.accessibilityTree\(sessionId/,
+  );
+  assert.match(
+    source,
+    /waitForAppPass[\s\S]*withTransientEdgeRetry\(\s*\(\) => simulator\.accessibilityTree\(sessionId[\s\S]*toUpperCase\(\)} PASS[\s\S]*keepAliveWithTransientRetry\(simulator, sessionId, signal\)/,
   );
   assert.match(source, /withTransientEdgeRetry\(\s+\(\) => writeScreenshot/);
   assert.match(source, /withTransientEdgeRetry\(\s+\(\) => simulator\.logs/);
