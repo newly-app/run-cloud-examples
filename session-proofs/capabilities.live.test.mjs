@@ -21,6 +21,7 @@ import {
   sessionEvidence,
   stage,
   wait,
+  withTransientEdgeRetry,
   writeBytes,
   writeJson,
 } from './support.mjs';
@@ -127,7 +128,10 @@ async function runCapabilitiesProof(signal) {
       });
 
       await stage(`${prefix}-session-release`, async () => {
-        const released = await releaseSession(surface, simulator, session.id, signal);
+        const released = await withTransientEdgeRetry(
+          () => releaseSession(surface, simulator, session.id, signal),
+          signal,
+        );
         assert.equal(released.status, 'released', `${surface} session did not release`);
         cleanup.push({ resource: 'session', surface, id: session.id, outcome: 'released' });
         sessions.splice(sessions.findIndex((item) => item.session.id === session.id), 1);
@@ -158,7 +162,10 @@ async function runCapabilitiesProof(signal) {
   if (simulator) {
     for (const retained of [...sessions].reverse()) {
       try {
-        const released = await releaseSession(retained.surface, simulator, retained.session.id, signal);
+        const released = await withTransientEdgeRetry(
+          () => releaseSession(retained.surface, simulator, retained.session.id, signal),
+          signal,
+        );
         cleanup.push({
           resource: 'session',
           surface: retained.surface,
@@ -209,65 +216,83 @@ async function runCapabilitiesProof(signal) {
 }
 
 async function startRecording(surface, simulator, sessionId, signal) {
-  return surface === 'sdk'
-    ? await simulator.startRecording(sessionId, {
-      idempotencyKey: `proof-${proofRun}-${platform}-sdk`,
-    })
-    : await invokeCli([
-      platform,
-      'recording',
-      'start',
-      sessionId,
-      '--idempotency-key',
-      `proof-${proofRun}-${platform}-cli`,
-      '--json',
-    ], signal);
+  return await withTransientEdgeRetry(
+    async () => surface === 'sdk'
+      ? await simulator.startRecording(sessionId, {
+        idempotencyKey: `proof-${proofRun}-${platform}-sdk`,
+      })
+      : await invokeCli([
+        platform,
+        'recording',
+        'start',
+        sessionId,
+        '--idempotency-key',
+        `proof-${proofRun}-${platform}-cli`,
+        '--json',
+      ], signal),
+    signal,
+  );
 }
 
 async function openUrl(surface, simulator, sessionId, url, signal) {
-  return surface === 'sdk'
-    ? await simulator.openUrl(sessionId, url)
-    : await invokeCli([platform, 'open-url', url, '--id', sessionId, '--json'], signal);
+  return await withTransientEdgeRetry(
+    async () => surface === 'sdk'
+      ? await simulator.openUrl(sessionId, url)
+      : await invokeCli([platform, 'open-url', url, '--id', sessionId, '--json'], signal),
+    signal,
+  );
 }
 
 async function captureScreenshot(surface, simulator, sessionId, filename, signal) {
   if (surface === 'sdk') {
-    const bytes = await simulator.screenshot(sessionId, {
-      requestId: `proof:${proofRun}:${platform}:sdk:screenshot`,
-      timeoutMs: 20_000,
+    const bytes = await withTransientEdgeRetry(
+      () => simulator.screenshot(sessionId, {
+        requestId: `proof:${proofRun}:${platform}:sdk:screenshot`,
+        timeoutMs: 20_000,
+        signal,
+      }),
       signal,
-    });
+    );
     return await writeBytes(filename, bytes);
   }
   const output = resolve(artifactDirectory, filename);
-  await invokeCli([platform, 'screenshot', sessionId, '--output', output], signal, false);
+  await withTransientEdgeRetry(
+    () => invokeCli([platform, 'screenshot', sessionId, '--output', output], signal, false),
+    signal,
+  );
   return await readArtifact(filename);
 }
 
 async function stopRecording(surface, simulator, sessionId, recordingId, signal) {
-  return surface === 'sdk'
-    ? await simulator.stopRecording(sessionId, recordingId)
-    : await invokeCli([
-      platform,
-      'recording',
-      'stop',
-      sessionId,
-      recordingId,
-      '--json',
-    ], signal);
+  return await withTransientEdgeRetry(
+    async () => surface === 'sdk'
+      ? await simulator.stopRecording(sessionId, recordingId)
+      : await invokeCli([
+        platform,
+        'recording',
+        'stop',
+        sessionId,
+        recordingId,
+        '--json',
+      ], signal),
+    signal,
+  );
 }
 
 async function getRecording(surface, simulator, sessionId, recordingId, signal) {
-  return surface === 'sdk'
-    ? await simulator.getRecording(sessionId, recordingId)
-    : await invokeCli([
-      platform,
-      'recording',
-      'status',
-      sessionId,
-      recordingId,
-      '--json',
-    ], signal);
+  return await withTransientEdgeRetry(
+    async () => surface === 'sdk'
+      ? await simulator.getRecording(sessionId, recordingId)
+      : await invokeCli([
+        platform,
+        'recording',
+        'status',
+        sessionId,
+        recordingId,
+        '--json',
+      ], signal),
+    signal,
+  );
 }
 
 async function waitForRecording(
@@ -306,19 +331,26 @@ async function downloadRecording(
   signal,
 ) {
   if (surface === 'sdk') {
-    return await writeBytes(filename, await simulator.downloadRecording(sessionId, recordingId));
+    const bytes = await withTransientEdgeRetry(
+      () => simulator.downloadRecording(sessionId, recordingId),
+      signal,
+    );
+    return await writeBytes(filename, bytes);
   }
   const output = resolve(artifactDirectory, filename);
-  const acknowledgement = await invokeCli([
-    platform,
-    'recording',
-    'download',
-    sessionId,
-    recordingId,
-    '--output',
-    output,
-    '--json',
-  ], signal);
+  const acknowledgement = await withTransientEdgeRetry(
+    () => invokeCli([
+      platform,
+      'recording',
+      'download',
+      sessionId,
+      recordingId,
+      '--output',
+      output,
+      '--json',
+    ], signal),
+    signal,
+  );
   assert.equal(acknowledgement.ok, true, 'CLI recording download omitted ok=true');
   assert.equal(acknowledgement.recordingId, recordingId);
   await writeJson('cli-recording-download.json', {

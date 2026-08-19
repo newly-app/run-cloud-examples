@@ -12,6 +12,8 @@ test('capability proof uses independent public SDK and CLI sessions and validate
   assert.match(source, /assertMp4\(bytes, ready/);
   assert.match(source, /assertPng\(screenshot/);
   assert.match(source, /production-open-url/);
+  assert.match(source, /idempotencyKey:/);
+  assert.match(source, /withTransientEdgeRetry/);
   assert.doesNotMatch(source, /fake|mock/i);
 });
 

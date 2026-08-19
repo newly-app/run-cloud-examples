@@ -15,6 +15,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 const SESSION_READY_TIMEOUT_MS = 180_000;
 const POLL_DELAY_MS = 1_000;
 const MAX_CLI_OUTPUT_BYTES = 2 * 1024 * 1024;
+const TRANSIENT_EDGE_RETRY_DELAYS_MS = [250, 750, 1_500];
 
 export const platform = oneOfEnvironment('RUN_CLOUD_PROOF_PLATFORM', ['ios', 'android']);
 export const proofRun = safeRunId(requiredEnvironment('RUN_CLOUD_PROOF_RUN_ID'));
@@ -318,6 +319,22 @@ export function asError(value) {
 
 export async function wait(milliseconds, signal) {
   await delay(milliseconds, undefined, signal ? { signal } : undefined);
+}
+
+export async function withTransientEdgeRetry(operation, signal) {
+  for (let attempt = 0; ; attempt += 1) {
+    throwIfAborted(signal);
+    try {
+      return await operation();
+    } catch (error) {
+      const failure = asError(error);
+      const status = Number.isInteger(failure.status) ? failure.status : null;
+      const transient = (status !== null && status >= 500 && status <= 504)
+        || /\brun\.cloud API 50[0-4]\b/i.test(failure.message);
+      if (!transient || attempt >= TRANSIENT_EDGE_RETRY_DELAYS_MS.length) throw failure;
+      await wait(TRANSIENT_EDGE_RETRY_DELAYS_MS[attempt], signal);
+    }
+  }
 }
 
 export function throwIfAborted(signal) {
