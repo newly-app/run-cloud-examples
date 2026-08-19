@@ -593,12 +593,10 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
   let nextKeepAliveAt = Date.now();
   while (Date.now() < deadline) {
     throwIfAborted(signal);
-    if (Date.now() >= nextKeepAliveAt) {
-      await keepAliveWithTransientRetry(simulator, sessionId, signal);
-      nextKeepAliveAt = Date.now() + 15_000;
-    }
+    let currentTree;
     try {
-      lastTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+      currentTree = await simulator.accessibilityTree(sessionId, { timeoutMs: 20_000, signal });
+      lastTree = currentTree;
     } catch (error) {
       if (isRetryableAccessibilityFailure(error)) {
         lastAccessibilityError = asError(error);
@@ -609,36 +607,41 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
             lastAccessibilityError,
           );
         }
-        await wait(POLL_DELAY_MS, signal);
-        continue;
+      } else {
+        if (lastTree) await writeJson(`${attempt}-last-tree-before-poll-error.json`, lastTree);
+        throw error;
       }
-      if (lastTree) await writeJson(`${attempt}-last-tree-before-poll-error.json`, lastTree);
-      throw error;
     }
-    accessibilityUnavailableSince = null;
-    lastAccessibilityError = null;
-    lastStatus = mediaStatus(lastTree) ?? lastStatus;
-    if (lastStatus?.includes(' FAIL ') && !isExpectedPreInjectionStatus(lastStatus, {
-      platform,
-      input: expectedInput,
-      attempt,
-    })) {
-      throw new Error(`native app rejected injected ${expectedInput}: ${lastStatus}`);
+    if (currentTree) {
+      accessibilityUnavailableSince = null;
+      lastAccessibilityError = null;
+      lastStatus = mediaStatus(currentTree) ?? lastStatus;
+      if (lastStatus?.includes(' FAIL ') && !isExpectedPreInjectionStatus(lastStatus, {
+        platform,
+        input: expectedInput,
+        attempt,
+      })) {
+        throw new Error(`native app rejected injected ${expectedInput}: ${lastStatus}`);
+      }
+      if (lastStatus?.includes(`${expectedInput.toUpperCase()} PASS`)) {
+        assertMediaPass(lastStatus, expectedInput, attempt);
+        return { tree: currentTree, status: lastStatus };
+      }
+      const button = permissionButton(currentTree);
+      if (button) {
+        await simulator.tap(sessionId, normalizedCenter(currentTree, button), {
+          requestId: boundedRequestId(
+            'media', mediaRun, platform, input, attempt, 'post-injection-permission', permissionTaps,
+          ),
+          timeoutMs: 20_000,
+          signal,
+        });
+        permissionTaps += 1;
+      }
     }
-    if (lastStatus?.includes(`${expectedInput.toUpperCase()} PASS`)) {
-      assertMediaPass(lastStatus, expectedInput, attempt);
-      return { tree: lastTree, status: lastStatus };
-    }
-    const button = permissionButton(lastTree);
-    if (button) {
-      await simulator.tap(sessionId, normalizedCenter(lastTree, button), {
-        requestId: boundedRequestId(
-          'media', mediaRun, platform, input, attempt, 'post-injection-permission', permissionTaps,
-        ),
-        timeoutMs: 20_000,
-        signal,
-      });
-      permissionTaps += 1;
+    if (Date.now() >= nextKeepAliveAt) {
+      await keepAliveWithTransientRetry(simulator, sessionId, signal);
+      nextKeepAliveAt = Date.now() + 15_000;
     }
     await wait(POLL_DELAY_MS, signal);
   }
