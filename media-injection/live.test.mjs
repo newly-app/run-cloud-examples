@@ -236,7 +236,10 @@ async function runMediaProof(signal) {
             await waitForAppPass(simulator, session.id, input, attempt, signal));
           await writeJson(`${stagePrefix}-tree-pass.json`, passed.tree);
           await stage(`${stagePrefix}-screenshot`, async () =>
-            await writeScreenshot(simulator, session.id, `${stagePrefix}-pass.png`, signal));
+            await withTransientEdgeRetry(
+              () => writeScreenshot(simulator, session.id, `${stagePrefix}-pass.png`, signal),
+              signal,
+            ));
           const logs = await stage(`${stagePrefix}-logs`, async () =>
             await withTransientEdgeRetry(
               () => simulator.logs(session.id, { tail: 300 }),
