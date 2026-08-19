@@ -83,6 +83,7 @@ function escapeHtml(value) {
 function embedUrl(value) {
   const url = new URL(value);
   url.searchParams.set('embed', '1');
+  url.searchParams.set('loadingGuard', '1');
   return url.toString();
 }
 
@@ -141,6 +142,7 @@ export function mosaicViewerHtml(sessions, duration, now = Date.now()) {
       const deadline = ${deadline};
       const tiles = [...document.querySelectorAll('.tile')];
       const frames = [...document.querySelectorAll('iframe')];
+      const frameOrigins = frames.map((frame) => new URL(frame.src).origin);
       const ready = new Set();
       const count = document.querySelector('#ready-count');
       const timer = document.querySelector('#timer');
@@ -152,7 +154,12 @@ export function mosaicViewerHtml(sessions, duration, now = Date.now()) {
       setInterval(tick, 250);
       window.addEventListener('message', (event) => {
         const index = frames.findIndex((frame) => frame.contentWindow === event.source);
-        if (index < 0 || !event.data || typeof event.data !== 'object') return;
+        if (
+          index < 0 ||
+          event.origin !== frameOrigins[index] ||
+          !event.data ||
+          typeof event.data !== 'object'
+        ) return;
         if (event.data.type === 'ios-simulator:status' && event.data.streaming === true) {
           ready.add(index);
           tiles[index].dataset.ready = 'true';
