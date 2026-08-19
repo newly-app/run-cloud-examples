@@ -9,6 +9,7 @@ import {
   IOS_SAFARI_START_PAGE_DISMISSAL,
   OPEN_URL_PROOF_TARGETS,
   parseScreenshotOptions,
+  runRetryableSimulatorAction,
   verifyOpenUrlResult,
 } from '../lib/screenshot-demo.mjs';
 import { inspectPng } from '../lib/png.mjs';
@@ -421,6 +422,34 @@ export function verifyScreenshotExample({
 }
 
 describe('shared screenshot validation and browser support', () => {
+  it('retries only SDK-declared retryable simulator action failures', async () => {
+    const retryable = new Error('transient transport failure');
+    retryable.retryable = true;
+    const attempts = [];
+    const waits = [];
+    const result = await runRetryableSimulatorAction(
+      async () => {
+        attempts.push('attempt');
+        if (attempts.length === 1) throw retryable;
+        return 'passed';
+      },
+      { sleep: async (milliseconds) => waits.push(milliseconds) },
+    );
+    assert.equal(result, 'passed');
+    assert.equal(attempts.length, 2);
+    assert.deepEqual(waits, [1_000]);
+
+    let nonRetryableAttempts = 0;
+    await assert.rejects(
+      () => runRetryableSimulatorAction(async () => {
+        nonRetryableAttempts += 1;
+        throw new Error('native assertion failed');
+      }),
+      /native assertion failed/,
+    );
+    assert.equal(nonRetryableAttempts, 1);
+  });
+
   it('rejects an acknowledgement that changes URL encoding or lease scope', () => {
     const valid = openUrlResponse('ios', OPEN_URL_PROOF_TARGETS.deepLink);
     assert.deepEqual(
