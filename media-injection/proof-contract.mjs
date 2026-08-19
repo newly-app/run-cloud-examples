@@ -63,6 +63,11 @@ export function isRetryableAccessibilityFailure(error) {
     && error?.action === 'accessibility';
 }
 
+export function isRetryableAccessibilityReadFailure(error) {
+  return isRetryableAccessibilityFailure(error)
+    || (Number.isInteger(error?.status) && error.status >= 500 && error.status <= 504);
+}
+
 export function permissionButton(tree) {
   const nodes = flattenAccessibilityTree(tree);
   const allowedLabels = [
