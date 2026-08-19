@@ -42,6 +42,8 @@ it('builds an Apple Silicon simulator app with the normal Xcode toolchain', asyn
   assert.match(source, /accessibilityContainerType = \.semanticGroup/);
   assert.match(source, /override var keyCommands/);
   assert.match(source, /let page = UIScrollView\(\)/);
+  assert.match(source, /page\.delaysContentTouches = false/);
+  assert.match(source, /page\.canCancelContentTouches = false/);
   assert.match(source, /page\.contentLayoutGuide/);
   assert.match(plist, /UIInterfaceOrientationLandscapeLeft/);
   assert.match(plist, /UIInterfaceOrientationLandscapeRight/);

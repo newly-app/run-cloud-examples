@@ -153,6 +153,8 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
 
         let page = UIScrollView()
         page.alwaysBounceVertical = false
+        page.delaysContentTouches = false
+        page.canCancelContentTouches = false
         page.keyboardDismissMode = .interactive
         page.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(page)
