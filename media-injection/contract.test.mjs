@@ -147,6 +147,7 @@ test('the live proof replaces only persistently inaccessible simulator sessions'
   assert.match(source, /sessionRetries/);
   assert.match(source, /const TRANSIENT_EDGE_RETRY_DELAYS_MS = \[250, 750, 1_500\]/);
   assert.match(source, /isTransientEdgeFailure/);
+  assert.match(source, /withTransientEdgeRetry\(\s+\(\) => writeScreenshot/);
   assert.match(source, /withTransientEdgeRetry\(\s+\(\) => simulator\.logs/);
 });
 
