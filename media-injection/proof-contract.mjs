@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 
 export const fingerprints = {
   camera: 'RCAM-v1:RGBY',
@@ -12,6 +13,17 @@ const retryableAccessibilityCodes = new Set([
 ]);
 
 const iosDeepLinkConfirmationPoint = Object.freeze({ x: 0.69, y: 0.535 });
+
+export function boundedRequestId(...segments) {
+  const candidate = segments
+    .map((segment) => String(segment))
+    .join(':')
+    .replace(/[^A-Za-z0-9._:-]/g, '-');
+  assert.ok(candidate.length > 0, 'request ID has no usable characters');
+  if (candidate.length <= 128) return candidate;
+  const suffix = createHash('sha256').update(candidate).digest('hex').slice(0, 16);
+  return `${candidate.slice(0, 111)}:${suffix}`;
+}
 
 export function flattenAccessibilityTree(tree) {
   const nodes = [];

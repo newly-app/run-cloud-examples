@@ -16,6 +16,7 @@ import test from 'node:test';
 import { generateFixtures } from './generate-fixtures.mjs';
 import {
   assertMediaPass,
+  boundedRequestId,
   deepLinkConfirmationPoint,
   fingerprints,
   isExpectedPreInjectionStatus,
@@ -515,7 +516,9 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
     const button = permissionButton(tree);
     if (button) {
       await simulator.tap(sessionId, normalizedCenter(tree, button), {
-        requestId: `media:${mediaRun}:${platform}:${input}:${attempt}:permission:${permissionTaps}`,
+        requestId: boundedRequestId(
+          'media', mediaRun, platform, input, attempt, 'permission', permissionTaps,
+        ),
         timeoutMs: 20_000,
         signal,
       });
@@ -529,7 +532,9 @@ async function waitForAppReady(simulator, sessionId, attempt, signal) {
         sessionId,
         deepLinkConfirmationPoint(platform, lastStatus, deepLinkConfirmationTapped),
         {
-          requestId: `media:${mediaRun}:${platform}:${input}:${attempt}:deep-link-confirmation`,
+          requestId: boundedRequestId(
+            'media', mediaRun, platform, input, attempt, 'deep-link-confirmation',
+          ),
           timeoutMs: 20_000,
           signal,
         },
@@ -616,7 +621,9 @@ async function waitForAppPass(simulator, sessionId, expectedInput, attempt, sign
     const button = permissionButton(lastTree);
     if (button) {
       await simulator.tap(sessionId, normalizedCenter(lastTree, button), {
-        requestId: `media:${mediaRun}:${platform}:${input}:${attempt}:post-injection-permission:${permissionTaps}`,
+        requestId: boundedRequestId(
+          'media', mediaRun, platform, input, attempt, 'post-injection-permission', permissionTaps,
+        ),
         timeoutMs: 20_000,
         signal,
       });
@@ -721,7 +728,7 @@ function acknowledgementEvidence(value) {
 
 async function writeScreenshot(simulator, sessionId, filename, signal) {
   const bytes = Buffer.from(await simulator.screenshot(sessionId, {
-    requestId: `media:${mediaRun}:${platform}:${input}:screenshot:${filename}`,
+    requestId: boundedRequestId('media', mediaRun, platform, input, 'screenshot', filename),
     timeoutMs: 20_000,
     signal,
   }));
