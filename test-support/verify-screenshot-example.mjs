@@ -97,6 +97,7 @@ export function verifyScreenshotExample({
         assert.deepEqual(fake.createOptions.installAssets, [`${platform}-asset`]);
         assert.equal(fake.createOptions.inactivityTimeout, '60s');
         assert.equal(fake.createOptions.hardTimeout, '10m');
+        assert.equal(fake.createOptions.expoSdkProfile, platform === 'android' ? 'expo-57' : undefined);
         assert.equal(fake.screenshotSessionId, `${platform}-session`);
         assert.deepEqual(fake.getSessionIds, [`${platform}-session`]);
         assert.equal(fake.deletedSessionId, `${platform}-session`);

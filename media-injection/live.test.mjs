@@ -161,6 +161,7 @@ async function runMediaProof(signal) {
         try {
           session = await stage(`${stagePrefix}-session-create`, async () =>
             await simulator.create({
+              ...(platform === 'android' ? { expoSdkProfile: 'expo-57' } : {}),
               displayName: `regression:${mediaRun}:${platform}:media-${input}-${surface}-r${sessionAttempt}`,
               tags: {
                 suite: 'native-media-injection',
