@@ -47,6 +47,17 @@ local authenticated commands, cleanup behavior, and retained evidence.
 
 ## Examples
 
+### Agent2Agent simulator connector
+
+Run a local A2A 1.0 JSON-RPC adapter with the official Agent2Agent SDK and your
+own run.cloud credential. It supports account checks, simulator allocation,
+screen inspection, input, and release. An opt-in registration proof can retrieve
+the verification email from an explicitly authorized inbox.
+
+See [a2a-simulator/README.md](a2a-simulator/README.md) for setup and
+[verification evidence](a2a-simulator/VERIFICATION.md) for the tested scope.
+This example does not provide a hosted A2A service or initiate wallet payments.
+
 ### Real iOS app screenshot
 
 Build a native iOS app from Swift source, upload and launch it in a simulator,

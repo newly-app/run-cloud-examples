@@ -46,10 +46,19 @@ jobs:
             media-injection/package-lock.json
             session-proofs/package-lock.json
             live-camera-relay/package-lock.json
+            a2a-simulator/package-lock.json
 
       - name: Install published-package test dependencies
         working-directory: tests
         run: npm ci
+
+      - name: Install A2A connector dependencies
+        working-directory: a2a-simulator
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test official A2A client and caller isolation
+        working-directory: a2a-simulator
+        run: npm test
 
       - name: Install SDK example dependencies
         working-directory: sdk-ios-android
