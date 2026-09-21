@@ -1,0 +1,24 @@
+{
+  "runId": "a18229a8-63dd-4047-9a1c-d10f91b571f6",
+  "startedAt": "2026-09-21T20:34:58.559Z",
+  "target": "https://api.run.cloud",
+  "framework": "@a2a-js/sdk@1.2.0",
+  "manualInputDuringRun": false,
+  "checks": {
+    "freshSignup": true,
+    "realEmailCodeRetrievedViaImap": true,
+    "organizationCreated": true,
+    "sdkAuthentication": true,
+    "cliAuthentication": true,
+    "a2aDiscovery": true,
+    "missingAndInvalidKeysRejected": true,
+    "a2aAuthentication": true,
+    "a2aAccountScopedRead": true
+  },
+  "limitations": [
+    "Loopback A2A adapter, deployed run.cloud upstream",
+    "Registration/auth only; payment is a separate proof"
+  ],
+  "status": "passed",
+  "finishedAt": "2026-09-21T20:35:28.966Z"
+}
