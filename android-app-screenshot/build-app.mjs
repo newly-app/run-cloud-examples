@@ -44,6 +44,7 @@ export async function buildApp(dependencies = {}) {
     join(javaSourceDirectory, 'MainActivity.java'),
     join(javaSourceDirectory, 'MediaProofController.java'),
     join(javaSourceDirectory, 'TapTargetAlignment.java'),
+    join(javaSourceDirectory, 'MoqProofView.java'),
   ]);
 
   const classFiles = await filesBelow(classesDirectory, '.class');

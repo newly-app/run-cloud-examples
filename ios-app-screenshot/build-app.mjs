@@ -31,6 +31,7 @@ export async function buildApp() {
       'swiftc',
       join(sourceDirectory, 'AppDelegate.swift'),
       join(sourceDirectory, 'MediaProof.swift'),
+      join(sourceDirectory, 'MoqProof.swift'),
       '-sdk',
       sdkPath,
       '-target',

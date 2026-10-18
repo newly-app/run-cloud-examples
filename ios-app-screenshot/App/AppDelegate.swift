@@ -160,12 +160,19 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         view.addSubview(page)
         page.addSubview(content)
         view.addSubview(deepLinkState)
+        let moqProof = MoqProofView()
+        moqProof.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(moqProof)
 
         NSLayoutConstraint.activate([
             page.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             page.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             page.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            page.bottomAnchor.constraint(equalTo: moqProof.topAnchor),
+            moqProof.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            moqProof.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            moqProof.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            moqProof.heightAnchor.constraint(equalToConstant: 74),
             content.leadingAnchor.constraint(equalTo: page.contentLayoutGuide.leadingAnchor, constant: 24),
             content.trailingAnchor.constraint(equalTo: page.contentLayoutGuide.trailingAnchor, constant: -24),
             content.topAnchor.constraint(equalTo: page.contentLayoutGuide.topAnchor, constant: 14),
