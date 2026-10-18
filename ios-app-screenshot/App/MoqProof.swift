@@ -73,7 +73,11 @@ private final class MoqBinaryClockView: UIView {
     override func draw(_ rect: CGRect) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
         let value = UInt64(Date().timeIntervalSince1970 * 1000) & ((1 << 36) - 1)
-        let bits = [0, 1, 0] + (0..<36).map { Int((value >> (35 - $0)) & 1) } + [1, 0, 1]
+        var bits: [Int] = [0, 1, 0]
+        for shift in stride(from: 35, through: 0, by: -1) {
+            bits.append(Int((value >> UInt64(shift)) & UInt64(1)))
+        }
+        bits.append(contentsOf: [1, 0, 1])
         context.setAllowsAntialiasing(false)
         context.setFillColor(UIColor.black.cgColor)
         context.fill(bounds)
