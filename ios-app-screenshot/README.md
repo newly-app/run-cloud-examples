@@ -173,3 +173,9 @@ rule, and state transition. The live public-SDK test scrolls the card into view,
 checks that the secure value is redacted, taps `Notifications`, taps
 `Open details`, and preserves the initial and updated trees as Actions
 artifacts.
+
+### Native MoQ measurement fixture
+
+The interaction screen retains its existing controls and adds a bottom native `moq-clock` strip and `moq-tap-target` counter. The clock paints device wall-clock milliseconds modulo 2^36, most-significant bit first, in 42 equal cells: black/white/black guards, 36 data cells, then white/black/white guards. Read cell centers, reject missing or ambiguous guards, and unwrap against the independently calibrated device wall clock. The strip updates on the native display callback; it is not a browser overlay.
+
+Each tap increments the independent native counter by exactly one and cycles blue/red/green. Read the native accessibility counter as the input correctness check and the visible color change for pointer-to-draw timing. Keep native framebuffer dimensions, uncertainty bounds, raw samples, and failed attempts in measurement evidence. A decoded clock records frame age at the browser, not photon latency. Build these fixtures through the existing CI `native-app-build` artifacts before fleet testing.

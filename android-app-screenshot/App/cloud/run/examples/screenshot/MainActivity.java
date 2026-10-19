@@ -177,6 +177,14 @@ public final class MainActivity extends Activity {
         deepLinkLayout.setMargins(dp(12), dp(8), dp(12), 0);
         root.addView(deepLinkState, deepLinkLayout);
 
+        MoqProofView moqProof = new MoqProofView(this);
+        FrameLayout.LayoutParams moqLayout = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, dp(74), Gravity.BOTTOM
+        );
+        moqLayout.setMargins(dp(12), 0, dp(12), 0);
+        root.addView(moqProof, moqLayout);
+        page.setPadding(0, 0, 0, dp(74));
+        page.setClipToPadding(false);
         setContentView(root);
         showDeepLink(getIntent(), "cold");
         content.post(() -> alignTapTarget(proofTopSpacer, tapButton));
