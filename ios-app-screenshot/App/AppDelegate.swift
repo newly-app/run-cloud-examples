@@ -156,6 +156,7 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
         page.delaysContentTouches = false
         page.canCancelContentTouches = true
         page.keyboardDismissMode = .interactive
+        page.contentInset.bottom = 86
         page.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(page)
         page.addSubview(content)
@@ -168,7 +169,7 @@ final class ProofViewController: UIViewController, UITextFieldDelegate, UIScroll
             page.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             page.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             page.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            page.bottomAnchor.constraint(equalTo: moqProof.topAnchor),
+            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             moqProof.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
             moqProof.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
             moqProof.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),

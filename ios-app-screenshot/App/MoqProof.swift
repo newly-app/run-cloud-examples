@@ -13,6 +13,7 @@ final class MoqProofView: UIView {
         target.titleLabel?.font = .monospacedSystemFont(ofSize: 16, weight: .bold)
         target.setTitleColor(.white, for: .normal)
         target.addTarget(self, action: #selector(tapped), for: .touchUpInside)
+        clock.isUserInteractionEnabled = false
         addSubview(target)
         addSubview(clock)
         updateTarget()
@@ -22,8 +23,13 @@ final class MoqProofView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        target.frame = CGRect(x: 0, y: 0, width: bounds.width, height: 42)
+        target.frame = CGRect(x: bounds.width * 0.1, y: 0, width: bounds.width * 0.8, height: 42)
         clock.frame = CGRect(x: 0, y: 46, width: bounds.width, height: 24)
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit === self ? nil : hit
     }
 
     @objc private func tapped() { count += 1; updateTarget() }
